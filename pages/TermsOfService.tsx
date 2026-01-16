@@ -38,9 +38,12 @@ const TermsOfService: React.FC = () => {
 
       <main className="max-w-3xl mx-auto px-6 py-20">
         {settings.termsContent ? (
-          <div className="prose prose-lg max-w-none text-gray-700 font-medium leading-relaxed whitespace-pre-wrap">
-            {settings.termsContent}
-          </div>
+          <div 
+            className="prose prose-lg max-w-none text-gray-700 font-medium leading-relaxed
+                       prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tighter prose-headings:text-black
+                       prose-strong:text-black prose-strong:font-black"
+            dangerouslySetInnerHTML={{ __html: settings.termsContent }}
+          />
         ) : (
           <div className="py-20 text-center text-gray-400 font-bold uppercase tracking-widest text-xs">
             Dokument se připravuje...

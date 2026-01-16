@@ -57,7 +57,6 @@ const AnalyticsTracker = () => {
 const AppContent = () => {
   const location = useLocation();
   const isAdminPage = location.pathname.startsWith('/admin');
-  const isContactPage = location.pathname === '/kontakt';
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -79,7 +78,7 @@ const AppContent = () => {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
-      {!isAdminPage && !isContactPage && <Footer />}
+      {!isAdminPage && <Footer />}
       {!isAdminPage && <CookieBar />}
     </div>
   );

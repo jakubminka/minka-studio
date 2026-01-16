@@ -33,10 +33,15 @@ const InquiryManager: React.FC = () => {
 
   const handleUpdate = async () => {
     if (!selectedInquiry) return;
-    await dataStore.collection('inquiries').update(selectedInquiry.id, editData);
-    setIsEditing(false);
-    setSelectedInquiry({...selectedInquiry, ...editData} as Inquiry);
-    loadData();
+    try {
+      await dataStore.collection('inquiries').update(selectedInquiry.id, editData);
+      setIsEditing(false);
+      setSelectedInquiry({...selectedInquiry, ...editData} as Inquiry);
+      loadData();
+      alert('Dotaz byl upraven.');
+    } catch (e) {
+      alert('Chyba při ukládání: ' + e);
+    }
   };
 
   const filtered = inquiries.filter(i => 
@@ -71,18 +76,27 @@ const InquiryManager: React.FC = () => {
               {i.status === 'new' && <div className="mt-2 w-2 h-2 bg-[#007BFF] rounded-full"></div>}
             </div>
           ))}
+          {filtered.length === 0 && (
+             <div className="p-20 text-center text-gray-300 font-black uppercase text-[10px] tracking-widest">Žádné dotazy</div>
+          )}
         </div>
 
         <div className="lg:col-span-7">
            <AnimatePresence mode="wait">
              {selectedInquiry ? (
-               <motion.div key={selectedInquiry.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white border p-10 space-y-8 min-h-[50vh]">
+               <motion.div key={selectedInquiry.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white border p-10 space-y-8 min-h-[50vh] relative">
                   <div className="flex justify-between items-center border-b pb-8">
-                     <div className="space-y-1">
+                     <div className="space-y-4 flex-grow pr-10">
                         {isEditing ? (
                           <div className="space-y-4">
-                            <input type="text" value={editData.name} onChange={e=>setEditData({...editData, name:e.target.value})} className="border p-2 text-sm font-bold w-full"/>
-                            <input type="text" value={editData.email} onChange={e=>setEditData({...editData, email:e.target.value})} className="border p-2 text-sm font-bold w-full"/>
+                            <div>
+                              <label className="text-[8px] font-black uppercase text-gray-400">Jméno</label>
+                              <input type="text" value={editData.name} onChange={e=>setEditData({...editData, name:e.target.value})} className="border p-2 text-sm font-bold w-full"/>
+                            </div>
+                            <div>
+                              <label className="text-[8px] font-black uppercase text-gray-400">Email</label>
+                              <input type="text" value={editData.email} onChange={e=>setEditData({...editData, email:e.target.value})} className="border p-2 text-sm font-bold w-full"/>
+                            </div>
                           </div>
                         ) : (
                           <>
@@ -91,27 +105,39 @@ const InquiryManager: React.FC = () => {
                           </>
                         )}
                      </div>
-                     <div className="flex gap-2">
+                     <div className="flex gap-2 shrink-0">
                         {isEditing ? (
-                          <button onClick={handleUpdate} className="p-3 bg-green-600 text-white rounded-sm"><Save size={18}/></button>
+                          <div className="flex gap-2">
+                             <button onClick={handleUpdate} className="p-3 bg-green-600 text-white rounded-sm hover:bg-green-700 transition-colors"><Save size={18}/></button>
+                             <button onClick={()=>setIsEditing(false)} className="p-3 bg-gray-100 text-gray-400 rounded-sm hover:text-black transition-colors"><X size={18}/></button>
+                          </div>
                         ) : (
-                          <button onClick={()=>setIsEditing(true)} className="p-3 bg-gray-50 text-gray-400 hover:text-black rounded-sm"><Edit2 size={18}/></button>
+                          <button onClick={()=>setIsEditing(true)} className="p-3 bg-gray-50 text-gray-400 hover:text-black rounded-sm transition-colors"><Edit2 size={18}/></button>
                         )}
                         <button onClick={()=>deleteInquiry(selectedInquiry.id)} className="p-3 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-sm transition-all"><Trash2 size={18}/></button>
                      </div>
                   </div>
-                  {isEditing ? (
-                    <textarea value={editData.message} onChange={e=>setEditData({...editData, message:e.target.value})} className="w-full border p-6 h-64 text-sm font-medium outline-none focus:border-[#007BFF]"/>
-                  ) : (
-                    <div className="bg-gray-50 p-8 border text-sm leading-relaxed font-medium whitespace-pre-wrap">
-                       {selectedInquiry.message}
-                    </div>
-                  )}
+                  
+                  <div className="space-y-2">
+                    <label className="text-[8px] font-black uppercase text-gray-400">Zpráva</label>
+                    {isEditing ? (
+                      <textarea value={editData.message} onChange={e=>setEditData({...editData, message:e.target.value})} className="w-full border p-6 h-64 text-sm font-medium outline-none focus:border-[#007BFF]"/>
+                    ) : (
+                      <div className="bg-gray-50 p-8 border text-sm leading-relaxed font-medium whitespace-pre-wrap">
+                         {selectedInquiry.message}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="pt-8 flex justify-between items-center text-[9px] font-black text-gray-300 uppercase tracking-widest">
+                     <span>ID: {selectedInquiry.id}</span>
+                     <span>Datum: {new Date(selectedInquiry.date).toLocaleString()}</span>
+                  </div>
                </motion.div>
              ) : (
                <div className="h-full flex flex-col items-center justify-center bg-gray-50 border border-dashed p-20 text-center">
                   <MessageSquare size={48} className="text-gray-200 mb-6" />
-                  <p className="text-[10px] font-black uppercase text-gray-400">Vyberte dotaz ze seznamu</p>
+                  <p className="text-[10px] font-black uppercase text-gray-400 tracking-[0.2em]">Vyberte dotaz pro zobrazení detailu</p>
                </div>
              )}
            </AnimatePresence>

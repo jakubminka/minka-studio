@@ -38,9 +38,12 @@ const PrivacyPolicy: React.FC = () => {
 
       <main className="max-w-3xl mx-auto px-6 py-20">
         {settings.privacyContent ? (
-          <div className="prose prose-lg max-w-none text-gray-700 font-medium leading-relaxed whitespace-pre-wrap">
-            {settings.privacyContent}
-          </div>
+          <div 
+            className="prose prose-lg max-w-none text-gray-700 font-medium leading-relaxed
+                       prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tighter prose-headings:text-black
+                       prose-strong:text-black prose-strong:font-black"
+            dangerouslySetInnerHTML={{ __html: settings.privacyContent }}
+          />
         ) : (
           <div className="space-y-12 animate-pulse">
             <div className="h-4 bg-gray-100 w-3/4"></div>

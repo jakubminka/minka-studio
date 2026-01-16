@@ -5,6 +5,7 @@ import Logo from './Logo';
 import { Link } from 'react-router-dom';
 import HumanVerificationModal from './HumanVerificationModal';
 import { WebSettings } from '../types';
+import { dataStore } from '../lib/db';
 
 const Footer: React.FC = () => {
   const [formState, setFormState] = useState<'idle' | 'loading' | 'success'>('idle');
@@ -25,9 +26,8 @@ const Footer: React.FC = () => {
 
   useEffect(() => {
     const load = async () => {
-      // Prioritizovat data z Firebase, pokud existují, jinak localStorage (fallback)
-      const saved = localStorage.getItem('jakub_minka_web_settings');
-      if (saved) setSettings(JSON.parse(saved));
+      const saved = await dataStore.doc('web_settings').get();
+      if (saved) setSettings(saved);
     };
     load();
   }, []);
@@ -42,14 +42,18 @@ const Footer: React.FC = () => {
   const handleVerificationSuccess = () => {
     setIsVerificationOpen(false);
     setFormState('loading');
-    setTimeout(() => {
-      const newInquiry = { id: Math.random().toString(36).substr(2, 9), ...formData, date: new Date().toISOString(), status: 'new' };
-      // Odeslat do DB by se mělo v ostrém provozu, zde simulujeme uložení
-      window.dispatchEvent(new Event('storage'));
+    setTimeout(async () => {
+      const newInquiry = { 
+        id: Math.random().toString(36).substr(2, 9), 
+        ...formData, 
+        date: new Date().toISOString(), 
+        status: 'new' 
+      };
+      await dataStore.collection('inquiries').save(newInquiry);
       setFormState('success');
       setFormData({ name: '', email: '', subject: '', message: '' });
       setTimeout(() => setFormState('idle'), 5000);
-    }, 1500);
+    }, 1000);
   };
 
   const triggerCookieSettings = (e: React.MouseEvent) => {
