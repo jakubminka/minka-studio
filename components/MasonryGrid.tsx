@@ -10,8 +10,6 @@ interface MasonryGridProps {
   showSpecialization?: boolean;
 }
 
-// Skutečné promíchání pole pro totální náhodu
-// Added 'extends object' constraint to T to fix the "Spread types may only be created from object types" error
 const shuffleArray = <T extends object>(array: T[]): T[] => {
   const shuffled = [...array];
   for (let i = shuffled.length - 1; i > 0; i--) {
@@ -38,7 +36,7 @@ const ProjectItem: React.FC<{ project: Project, weight: number, showSpecializati
         flexGrow: weight, 
         flexBasis: window.innerWidth < 768 ? '100%' : `${weight * 300}px`,
       }}
-      className="relative group overflow-hidden h-[300px] md:h-[500px] bg-black"
+      className="relative group overflow-hidden h-[300px] md:h-[500px] bg-black border border-white/5"
     >
       <Link to={`/projekt/${project.id}`} className="block w-full h-full relative">
         <div className="absolute inset-0 w-full h-full overflow-hidden">
@@ -51,16 +49,19 @@ const ProjectItem: React.FC<{ project: Project, weight: number, showSpecializati
             transition={{ duration: 1 }}
             className="w-full h-full object-cover grayscale-[0.3] group-hover:grayscale-0 group-hover:scale-110 transition-transform duration-[3s] ease-out"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent z-10 opacity-60 group-hover:opacity-100 transition-opacity duration-700"></div>
+          {/* Dark Cinematic Gradient Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent z-10 opacity-90 group-hover:opacity-60 transition-opacity duration-700"></div>
+          {/* Blue tint on hover */}
+          <div className="absolute inset-0 bg-[#007BFF]/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-15"></div>
         </div>
         
         <div className="absolute inset-0 flex flex-col justify-end p-6 md:p-12 text-white z-20 pointer-events-none">
           <div className="flex flex-wrap items-center gap-2 mb-4">
-            <span className={`px-4 py-1 text-[8px] font-black uppercase tracking-widest flex items-center gap-2 ${project.type === MediaType.VIDEO ? 'bg-[#FF3B30]' : project.type === MediaType.BOTH ? 'bg-[#2ECC71]' : 'bg-[#007BFF]'}`}>
+            <span className={`px-4 py-1 text-[8px] font-black uppercase tracking-widest flex items-center gap-2 text-white ${project.type === MediaType.VIDEO ? 'bg-[#FF3B30]' : project.type === MediaType.BOTH ? 'bg-[#2ECC71]' : 'bg-[#007BFF]'}`}>
               {getMediaLabel(project.type)}
             </span>
             {showSpecialization && (
-              <span className="bg-white/10 backdrop-blur-md px-4 py-1.5 text-[8px] font-black uppercase tracking-widest border border-white/20">
+              <span className="bg-white/10 backdrop-blur-md px-4 py-1.5 text-[8px] font-black uppercase tracking-widest border border-white/10 text-white/80">
                 {project.category}
               </span>
             )}
@@ -70,8 +71,8 @@ const ProjectItem: React.FC<{ project: Project, weight: number, showSpecializati
             {project.title}
           </h3>
           
-          <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.5em] text-white/40 group-hover:text-white transition-all duration-500 group-hover:translate-x-2">
-            PROHLÉDNOUT <ArrowUpRight size={16} />
+          <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.5em] text-white/40 group-hover:text-[#007BFF] transition-all duration-500 group-hover:translate-x-2">
+            DETAIL PROJEKTU <ArrowUpRight size={16} />
           </div>
         </div>
       </Link>
@@ -80,19 +81,10 @@ const ProjectItem: React.FC<{ project: Project, weight: number, showSpecializati
 };
 
 const MasonryGrid: React.FC<MasonryGridProps> = ({ projects, showSpecialization = false }) => {
-  // Každé načtení gridu vygeneruje unikátní náhodné rozložení i pořadí
   const randomizedLayout = useMemo(() => {
     if (!projects || projects.length === 0) return [];
-    
-    // 1. Zamíchat pořadí projektů
     const shuffled = shuffleArray(projects);
-    
-    // 2. Přiřadit náhodné váhy pro flex-grow
-    return shuffled.map((project) => {
-      const weight = Math.random() > 0.5 ? 2.0 : 1.2;
-      // Spreading 'project' is now safe because shuffleArray constrains its elements to be objects
-      return { ...project, weight };
-    });
+    return shuffled.map((project) => ({ ...project, weight: Math.random() > 0.5 ? 2.0 : 1.2 }));
   }, [projects]); 
 
   return (

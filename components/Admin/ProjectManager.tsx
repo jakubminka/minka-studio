@@ -3,7 +3,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Project, MediaType, FileItem, GalleryItem } from '../../types';
 import { SPECIALIZATIONS } from '../../constants';
 import { 
-  Plus, Trash2, Edit2, X, Search, Youtube, HardDrive, ChevronRight, Folder, Upload, RefreshCw, Video, CheckSquare, Square
+  Plus, Trash2, Edit2, X, Search, Youtube, HardDrive, ChevronRight, Folder, Upload, RefreshCw, Video, CheckSquare, Square,
+  Bold, Italic, List
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { mediaDB, dataStore, storage, optimizeImage } from '../../lib/db';
@@ -22,6 +23,7 @@ const ProjectManager: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{name: string, progress: number} | null>(null);
 
+  const editorRef = useRef<HTMLDivElement>(null);
   const [formData, setFormData] = useState<Partial<Project>>({
     title: '', description: '', shortDescription: '', categoryId: SPECIALIZATIONS[0].id,
     type: MediaType.BOTH, date: new Date().toISOString().split('T')[0],
@@ -37,6 +39,10 @@ const ProjectManager: React.FC = () => {
 
   useEffect(() => { loadData(); }, []);
 
+  const handleEditorCommand = (command: string, value: string = '') => {
+    document.execCommand(command, false, value);
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title) return;
@@ -46,7 +52,7 @@ const ProjectManager: React.FC = () => {
       title: formData.title!,
       category: SPECIALIZATIONS.find(s => s.id === formData.categoryId)?.name || 'Ostatní',
       categoryId: formData.categoryId!,
-      description: formData.description || '',
+      description: editorRef.current?.innerHTML || '',
       shortDescription: formData.shortDescription || '',
       thumbnailUrl: formData.thumbnailUrl || '',
       thumbnailSource: formData.thumbnailSource as any || 'pc',
@@ -132,7 +138,7 @@ const ProjectManager: React.FC = () => {
   return (
     <div className="space-y-8">
       <div className="bg-white p-6 border flex justify-between items-center shadow-sm">
-        <button onClick={()=>{setEditingId(null); setFormData({title:'', gallery:[], categoryId:SPECIALIZATIONS[0].id}); setShowForm(true)}} className="bg-[#007BFF] text-white px-8 py-3.5 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all">
+        <button onClick={()=>{setEditingId(null); setFormData({title:'', gallery:[], categoryId:SPECIALIZATIONS[0].id}); setShowForm(true); setTimeout(() => {if(editorRef.current) editorRef.current.innerHTML=''}, 100)}} className="bg-[#007BFF] text-white px-8 py-3.5 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all">
           <Plus className="inline mr-2" size={16}/> PŘIDAT ZAKÁZKU
         </button>
         <div className="relative">
@@ -158,8 +164,15 @@ const ProjectManager: React.FC = () => {
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase text-gray-400">Dlouhý popis</label>
-                    <textarea value={formData.description} onChange={e=>setFormData({...formData, description:e.target.value})} className={`${inputClass} h-48 resize-none`} placeholder="O čem projekt byl..." />
+                    <label className="text-[10px] font-black uppercase text-gray-400">Popis projektu (WYSIWYG)</label>
+                    <div className="border-2 border-gray-100 rounded-sm overflow-hidden">
+                       <div className="bg-gray-100 border-b p-2 flex gap-2">
+                          <button type="button" onClick={() => handleEditorCommand('bold')} className="p-1 hover:bg-white rounded"><Bold size={16}/></button>
+                          <button type="button" onClick={() => handleEditorCommand('italic')} className="p-1 hover:bg-white rounded"><Italic size={16}/></button>
+                          <button type="button" onClick={() => handleEditorCommand('insertUnorderedList')} className="p-1 hover:bg-white rounded"><List size={16}/></button>
+                       </div>
+                       <div ref={editorRef} contentEditable className="min-h-[250px] p-6 outline-none prose prose-sm max-w-none bg-white" dangerouslySetInnerHTML={{__html: formData.description || ''}} />
+                    </div>
                   </div>
                </div>
                <div className="space-y-6">
@@ -190,7 +203,7 @@ const ProjectManager: React.FC = () => {
                   </div>
                   
                   <button disabled={isProcessing} className="w-full bg-black text-white py-6 text-[11px] font-black uppercase tracking-[0.4em] hover:bg-[#007BFF] transition-all shadow-xl">
-                    {isProcessing ? <RefreshCw className="animate-spin inline mr-2"/> : 'PUBLIKOVAT PROJEKT'}
+                    {isProcessing ? <RefreshCw className="animate-spin inline mr-2"/> : 'PUBLIKOVAT ZAKÁZKU'}
                   </button>
                </div>
             </form>
@@ -212,18 +225,6 @@ const ProjectManager: React.FC = () => {
                   </div>
                </div>
                
-               {uploadProgress && (
-                 <div className="bg-blue-50 p-4 border-b border-blue-100 text-black">
-                    <div className="flex justify-between text-[10px] font-black uppercase mb-2">
-                       <span>Nahrávám: {uploadProgress.name}</span>
-                       <span>{uploadProgress.progress}%</span>
-                    </div>
-                    <div className="h-1 w-full bg-blue-100 rounded-full overflow-hidden">
-                       <motion.div className="h-full bg-[#007BFF]" animate={{ width: `${uploadProgress.progress}%` }} />
-                    </div>
-                 </div>
-               )}
-
                <div className="p-10 grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-6 overflow-y-auto bg-gray-50/20">
                   {allItems.map(item => (
                     <div 

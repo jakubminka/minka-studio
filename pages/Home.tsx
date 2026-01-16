@@ -34,17 +34,13 @@ const Home: React.FC = () => {
   const cursorY = useSpring(mouseY, { damping: 30, stiffness: 250 });
 
   useEffect(() => {
-    const savedProjects = localStorage.getItem('jakub_minka_projects');
-    if (savedProjects) setProjects(JSON.parse(savedProjects));
-    
-    const savedSettings = localStorage.getItem('jakub_minka_web_settings');
-    if (savedSettings) setSettings(prev => ({ ...prev, ...JSON.parse(savedSettings) }));
-
-    const savedPartners = localStorage.getItem('jakub_minka_partners');
-    if (savedPartners) setPartners(JSON.parse(savedPartners));
-
-    const savedReviews = localStorage.getItem('jakub_minka_reviews');
-    if (savedReviews) setReviews(JSON.parse(savedReviews));
+    const load = async () => {
+      const savedProjects = localStorage.getItem('jakub_minka_projects');
+      if (savedProjects) setProjects(JSON.parse(savedProjects));
+      const savedSettings = localStorage.getItem('jakub_minka_web_settings');
+      if (savedSettings) setSettings(prev => ({ ...prev, ...JSON.parse(savedSettings) }));
+    };
+    load();
   }, []);
 
   const homePortfolioProjects = useMemo(() => {
@@ -73,7 +69,6 @@ const Home: React.FC = () => {
 
   const activeProject = heroProjects[currentSlide];
 
-  // Příprava log pro nekonečný loop (zprava doleva)
   const partnerList = partners.length > 0 ? partners : [
     {id: '1', name: 'Skoda Auto'}, {id: '2', name: 'Red Bull'}, {id: '3', name: 'STRABAG'}, 
     {id: '4', name: 'Metrostav'}, {id: '5', name: 'Volvo'}, {id: '6', name: 'Siemens'},
@@ -82,9 +77,9 @@ const Home: React.FC = () => {
 
   return (
     <div className="w-full overflow-hidden bg-white">
-      {/* 1. HERO SECTION WITH INDICATORS */}
+      {/* 1. HERO SECTION */}
       <section 
-        className={`relative h-[90vh] w-full overflow-hidden bg-black text-white ${hoverSide ? 'cursor-none' : 'cursor-default'}`}
+        className={`relative h-[90vh] w-full overflow-hidden bg-[#0A192F] text-white ${hoverSide ? 'cursor-none' : 'cursor-default'}`}
         onMouseMove={handleMouseMove}
         onMouseLeave={() => setHoverSide(null)}
       >
@@ -104,8 +99,8 @@ const Home: React.FC = () => {
         <div className="absolute inset-0 z-0 h-full w-full">
           {heroProjects.map((project, idx) => (
             <div key={`bg-${project.id}`} className={`absolute inset-0 h-full w-full transition-opacity duration-[1500ms] ease-in-out ${idx === currentSlide ? 'opacity-100' : 'opacity-0'}`}>
-              <div className="absolute inset-0 bg-black/50 z-10"></div>
-              <img src={project.thumbnailUrl} alt="" className="w-full h-full object-cover scale-105" />
+              <div className="absolute inset-0 bg-gradient-to-b from-[#0A192F]/60 to-[#0A192F]/90 z-10"></div>
+              <img src={project.thumbnailUrl} alt="" className="w-full h-full object-cover grayscale opacity-60" />
             </div>
           ))}
         </div>
@@ -114,73 +109,64 @@ const Home: React.FC = () => {
           <AnimatePresence mode="wait">
             <motion.div key={currentSlide} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -30 }} transition={{ duration: 0.8 }} className="flex flex-col items-center">
               <span className="bg-[#007BFF] text-white font-black text-[9px] uppercase tracking-[0.5em] px-6 py-2.5 mb-8 shadow-xl">{activeProject?.category}</span>
-              <h1 className="text-5xl md:text-8xl lg:text-[140px] font-black mb-14 tracking-tighter leading-[0.8] uppercase drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)]">{activeProject?.title}</h1>
-              <Link to={`/projekt/${activeProject?.id}`} className="pointer-events-auto border-2 border-white/60 px-14 py-5 text-[11px] font-black uppercase tracking-[0.6em] hover:bg-white hover:text-black transition-all bg-black/20 backdrop-blur-md">PROHLÉDNOUT</Link>
+              <h1 className="text-5xl md:text-8xl lg:text-[140px] font-black mb-14 tracking-tighter leading-[0.8] uppercase drop-shadow-2xl">{activeProject?.title}</h1>
+              <Link to={`/projekt/${activeProject?.id}`} className="pointer-events-auto border-2 border-[#007BFF] px-14 py-5 text-[11px] font-black uppercase tracking-[0.6em] hover:bg-white hover:text-black transition-all bg-[#007BFF]/20 backdrop-blur-md">PROHLÉDNOUT</Link>
             </motion.div>
           </AnimatePresence>
         </div>
 
-        {/* SLIDE INDICATORS (Tečky) */}
         <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-40 flex gap-4">
           {heroProjects.map((_, i) => (
             <button 
               key={i} 
               onClick={() => setCurrentSlide(i)}
               className={`h-2 transition-all duration-500 rounded-full ${currentSlide === i ? 'w-16 bg-[#007BFF]' : 'w-2 bg-white/20 hover:bg-white/40'}`}
-              aria-label={`Přejít na slide ${i + 1}`}
             />
           ))}
         </div>
       </section>
 
-      {/* 2. O MNĚ SECTION */}
+      {/* 2. O MNĚ - SUPPORTS HTML CONTENT */}
       <section className="py-32 bg-white overflow-hidden">
         <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-24 items-center">
           <div className="relative group">
             <div className="absolute -top-6 -left-6 w-32 h-32 border-l-4 border-t-4 border-[#007BFF] -z-10 group-hover:scale-110 transition-transform"></div>
             <img src={settings.profilePic} className="w-full aspect-[4/5] object-cover grayscale hover:grayscale-0 transition-all duration-1000 shadow-2xl" alt="Jakub Minka" />
-            <div className="absolute -bottom-8 -right-8 bg-black text-white p-10 hidden md:block">
-              <p className="text-4xl font-black tracking-tighter uppercase leading-none">12+ LET</p>
+            <div className="absolute -bottom-8 -right-8 bg-white border border-gray-100 shadow-2xl p-10 hidden md:block">
+              <p className="text-4xl font-black tracking-tighter uppercase leading-none text-black">12+ LET</p>
               <p className="text-[10px] font-black uppercase tracking-widest text-[#007BFF] mt-2">ZKUŠENOSTÍ V OBORU</p>
             </div>
           </div>
           <div className="space-y-10">
             <div className="space-y-4">
-              <span className="text-[#007BFF] font-black text-xs uppercase tracking-[0.6em] block">O mně</span>
+              <span className="text-[#007BFF] font-black text-xs uppercase tracking-[0.6em] block">Představení</span>
               <h2 className="text-5xl md:text-7xl font-black tracking-tighter leading-[0.9] uppercase text-black">{settings.homeAboutTitle}</h2>
             </div>
-            <div className="prose prose-xl text-gray-600 font-medium leading-relaxed whitespace-pre-wrap">
-              {settings.homeAboutText}
-            </div>
+            <div 
+              className="prose prose-xl text-gray-600 font-medium leading-relaxed
+                         prose-headings:font-black prose-headings:text-black prose-headings:uppercase prose-headings:tracking-tighter
+                         prose-strong:text-black prose-strong:font-black
+                         prose-ul:list-disc prose-li:mb-2"
+              dangerouslySetInnerHTML={{ __html: settings.homeAboutText }}
+            />
             <div className="pt-6">
-              <Link to="/kontakt" className="inline-flex items-center gap-4 text-black text-[12px] font-black uppercase tracking-[0.4em] group border-b-4 border-black pb-2 hover:text-[#007BFF] hover:border-[#007BFF] transition-all">
-                VÍCE O MÉ PRÁCI <ArrowUpRight size={20} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+              <Link to="/kontakt" className="inline-flex items-center gap-4 text-[#007BFF] text-[12px] font-black uppercase tracking-[0.4em] group border-b-4 border-[#007BFF] pb-2 hover:text-black hover:border-black transition-all">
+                MÁM ZÁJEM O SPOLUPRÁCI <ArrowUpRight size={20} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
               </Link>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 3. SPOLUPRACOVAL JSEM SECTION (INFINITE LOOP - ZPRAVA DOLEVA) */}
-      <section className="py-24 bg-gray-50 border-y border-gray-100 overflow-hidden relative">
-        <style>{`
-          @keyframes marquee {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-50%); }
-          }
-          .animate-marquee {
-            display: flex;
-            width: fit-content;
-            animation: marquee 30s linear infinite;
-          }
-        `}</style>
+      {/* 3. MARQUEE - DARK BLUE THEME */}
+      <section className="py-24 bg-[#0A192F] border-y border-white/5 overflow-hidden relative">
         <div className="max-w-7xl mx-auto px-6 mb-12 relative z-10">
-          <h3 className="text-[10px] font-black uppercase tracking-[0.5em] text-gray-400 italic">Důvěřují mému vizuálnímu rukopisu</h3>
+          <h3 className="text-[10px] font-black uppercase tracking-[0.5em] text-[#007BFF] italic">Spolupracoval jsem s</h3>
         </div>
-        <div className="flex whitespace-nowrap">
-           <div className="animate-marquee flex items-center gap-24">
-              {[...partnerList, ...partnerList].map((p, idx) => (
-                <span key={`${p.id}-${idx}`} className="text-3xl md:text-5xl font-black uppercase tracking-tighter text-black/20 hover:text-[#007BFF] transition-colors cursor-default">
+        <div className="flex whitespace-nowrap overflow-hidden">
+           <div className="flex items-center gap-24 animate-[marquee_30s_linear_infinite]">
+              {[...partnerList, ...partnerList, ...partnerList].map((p, idx) => (
+                <span key={`${p.id}-${idx}`} className="text-3xl md:text-5xl font-black uppercase tracking-tighter text-white/10 hover:text-white transition-colors duration-500 cursor-default">
                   {p.name}
                 </span>
               ))}
@@ -188,148 +174,136 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* 4. SPECIALIZACE SECTION (2x5 GRID) */}
+      {/* 4. SPECIALIZACE - DARK/BLUE GRID */}
       <section className="py-32 bg-white">
         <div className="max-w-7xl mx-auto px-6 mb-20">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-10">
              <div className="space-y-4">
-               <span className="text-[#007BFF] font-black text-xs uppercase tracking-[0.7em] block">Komplexní služby</span>
+               <span className="text-[#007BFF] font-black text-xs uppercase tracking-[0.7em] block">Služby na míru</span>
                <h2 className="text-5xl md:text-7xl font-black tracking-tighter leading-none text-black uppercase">Specializace</h2>
              </div>
-             <p className="text-gray-400 max-w-sm text-sm font-medium leading-relaxed">
-               Deset klíčových oblastí včetně dronů a svateb, ve kterých dodávám špičkový vizuální obsah.
-             </p>
           </div>
         </div>
-        <div className="max-w-full grid grid-cols-2 md:grid-cols-5 bg-black">
-           {SPECIALIZATIONS.map(spec => {
-             const Content = (
-                <>
-                  <img src={spec.image} className="w-full h-full object-cover opacity-40 grayscale group-hover:scale-110 group-hover:opacity-70 transition-all duration-1000" />
-                  <div className="absolute inset-0 p-6 md:p-10 flex flex-col justify-end">
-                     <h4 className="text-xl md:text-2xl font-black text-white uppercase tracking-tighter group-hover:text-[#007BFF] transition-colors leading-tight">{spec.name}</h4>
-                     <p className="text-[8px] font-black text-white/30 uppercase tracking-widest mt-2 group-hover:text-white transition-colors">
-                       {spec.externalUrl ? 'Navštívit web' : 'Zobrazit portfolio'}
-                     </p>
-                  </div>
-                  <div className="absolute top-6 right-6 text-white/20 group-hover:text-[#007BFF] transition-colors">
-                    {spec.externalUrl ? <ExternalLink size={24} /> : <ArrowUpRight size={24} />}
-                  </div>
-                </>
-             );
-
-             return spec.externalUrl ? (
-               <a key={spec.id} href={spec.externalUrl} target="_blank" rel="noopener noreferrer" className="group relative aspect-square overflow-hidden bg-black border border-white/5">
-                 {Content}
-               </a>
-             ) : (
-               <Link key={spec.id} to={`/specializace/${spec.id}`} className="group relative aspect-square overflow-hidden bg-black border border-white/5">
-                 {Content}
-               </Link>
-             );
-           })}
+        <div className="max-w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 bg-black">
+           {SPECIALIZATIONS.map(spec => (
+             <Link key={spec.id} to={spec.externalUrl ? '#' : `/specializace/${spec.id}`} onClick={e => spec.externalUrl && window.open(spec.externalUrl, '_blank')} className="group relative aspect-square overflow-hidden border border-white/5">
+                <img src={spec.image} className="w-full h-full object-cover opacity-40 grayscale group-hover:scale-110 group-hover:opacity-60 group-hover:grayscale-0 transition-all duration-1000" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent z-10"></div>
+                <div className="absolute inset-0 p-8 flex flex-col justify-end z-20">
+                   <h4 className="text-xl md:text-2xl font-black text-white uppercase tracking-tighter group-hover:text-[#007BFF] transition-colors leading-tight">{spec.name}</h4>
+                   <div className="h-0.5 w-0 bg-[#007BFF] group-hover:w-full transition-all duration-500 mt-4"></div>
+                   <p className="text-[8px] font-black text-[#007BFF] uppercase tracking-widest mt-4 opacity-0 group-hover:opacity-100 transition-opacity translate-y-4 group-hover:translate-y-0 duration-500">
+                     PROHLÉDNOUT VÝSLEDKY
+                   </p>
+                </div>
+                <div className="absolute top-8 right-8 text-white/20 group-hover:text-[#007BFF] transition-colors z-20">
+                  {spec.externalUrl ? <ExternalLink size={24} /> : <ArrowUpRight size={24} />}
+                </div>
+             </Link>
+           ))}
         </div>
       </section>
 
-      {/* 5. PORTFOLIO SECTION */}
-      <section className="py-32 bg-black">
+      {/* 5. PORTFOLIO */}
+      <section className="py-32 bg-white">
         <div className="max-w-7xl mx-auto px-6 mb-20 text-center">
-          <span className="text-[#007BFF] font-black text-xs uppercase tracking-[0.7em] block mb-6">Práce, za kterou si stojím</span>
-          <h2 className="text-6xl md:text-8xl font-black tracking-tighter leading-none text-white uppercase">Portfolio</h2>
+          <span className="text-[#007BFF] font-black text-xs uppercase tracking-[0.7em] block mb-6">Nejnovější projekty</span>
+          <h2 className="text-6xl md:text-8xl font-black tracking-tighter leading-none text-black uppercase">Portfolio</h2>
         </div>
         <MasonryGrid projects={homePortfolioProjects} showSpecialization={true} />
         <div className="mt-24 flex justify-center">
-          <Link to="/portfolio" className="bg-[#007BFF] text-white px-20 py-5 text-[11px] font-black uppercase tracking-[0.5em] hover:bg-white hover:text-black transition-all shadow-2xl">VŠECHNY PROJEKTY</Link>
+          <Link to="/portfolio" className="bg-[#007BFF] text-white px-20 py-5 text-[11px] font-black uppercase tracking-[0.5em] hover:bg-black transition-all shadow-2xl">ZOBRAZIT VŠE</Link>
         </div>
       </section>
 
-      {/* 6. CENÍK SECTION */}
-      <section className="py-32 bg-white relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#007BFF] opacity-5 blur-[120px]"></div>
+      {/* 6. CENÍK - SUPPORTS HTML DESCRIPTIONS */}
+      <section className="py-32 bg-blue-50/30 relative overflow-hidden border-y border-blue-100">
         <div className="max-w-7xl mx-auto px-6 flex flex-col lg:flex-row items-center gap-24">
           <div className="lg:w-1/2 space-y-10">
             <div className="space-y-4">
               <span className="text-[#007BFF] font-black text-[11px] uppercase tracking-[0.8em] block">{settings.pricingSubtitle}</span>
               <h2 className="text-5xl md:text-8xl font-black tracking-tighter leading-none uppercase text-black">{settings.pricingTitle}</h2>
             </div>
-            <p className="text-gray-500 text-lg leading-relaxed max-w-xl font-medium">Finální cena se odvíjí od rozsahu, technické náročnosti a využití výstupů (licence). Kontaktujte mě pro konkrétní nabídku.</p>
-            <div className="flex items-center gap-6 p-8 bg-gray-50 border border-gray-100">
-               <div className="p-4 bg-[#007BFF]/10 text-[#007BFF]"><Info size={28} /></div>
-               <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Rychlá poptávka</p>
-                  <Link to="/kontakt" className="text-sm font-black uppercase border-b-2 border-black hover:text-[#007BFF] hover:border-[#007BFF] transition-all">Napište si o kalkulaci</Link>
-               </div>
-            </div>
+            <p className="text-gray-500 text-lg leading-relaxed max-w-xl font-medium">Investice do špičkového vizuálu je investicí do vnímání vaší značky. Každý projekt je unikátní a vyžaduje individuální nacenění.</p>
           </div>
           <div className="lg:w-1/2 grid grid-cols-1 md:grid-cols-2 gap-8 w-full">
-            <div className="bg-white border-4 border-gray-100 p-12 space-y-8 hover:border-[#007BFF] transition-all group">
+            <div className="bg-white border-2 border-gray-100 p-12 space-y-8 hover:border-[#007BFF] transition-all group shadow-sm">
               <Wallet className="text-[#007BFF]" size={40} />
               <div className="space-y-2">
                 <h3 className="text-sm font-black uppercase tracking-widest text-gray-400">{settings.price1Title}</h3>
                 <p className="text-3xl font-black tracking-tighter text-black">{settings.price1Value}</p>
               </div>
-              <p className="text-xs text-gray-500 font-bold uppercase tracking-widest leading-relaxed line-clamp-4">{settings.price1Desc}</p>
+              <div 
+                className="text-xs text-gray-500 font-bold uppercase tracking-widest leading-relaxed
+                           prose-ul:list-disc prose-ul:ml-4 prose-li:mb-1"
+                dangerouslySetInnerHTML={{ __html: settings.price1Desc }}
+              />
             </div>
-            <div className="bg-black p-12 space-y-8 hover:bg-[#007BFF] transition-all group shadow-2xl">
-              <Zap className="text-[#007BFF] group-hover:text-white" size={40} />
+            <div className="bg-[#007BFF] p-12 space-y-8 hover:bg-black transition-all group shadow-2xl text-white">
+              <Zap className="text-white" size={40} />
               <div className="space-y-2">
-                <h3 className="text-sm font-black uppercase tracking-widest text-white/40">{settings.price2Title}</h3>
+                <h3 className="text-sm font-black uppercase tracking-widest text-white/60">{settings.price2Title}</h3>
                 <p className="text-3xl font-black tracking-tighter text-white">{settings.price2Value}</p>
               </div>
-              <p className="text-xs text-white/50 font-bold uppercase tracking-widest leading-relaxed line-clamp-4 group-hover:text-white">{settings.price2Desc}</p>
+              <div 
+                className="text-xs text-white/70 font-bold uppercase tracking-widest leading-relaxed group-hover:text-white
+                           prose-ul:list-disc prose-ul:ml-4 prose-li:mb-1"
+                dangerouslySetInnerHTML={{ __html: settings.price2Desc }}
+              />
             </div>
           </div>
         </div>
       </section>
 
-      {/* 7. FINAL CTA SECTION */}
-      <section className="py-40 bg-gray-950 text-white relative overflow-hidden">
-         <div className="absolute inset-0 opacity-10">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#007BFF] rounded-full blur-[150px]"></div>
+      {/* 7. FINAL CTA */}
+      <section className="py-40 bg-[#0A192F] text-white relative overflow-hidden">
+         <div className="absolute inset-0 z-0">
+           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#007BFF] opacity-5 blur-[120px] rounded-full"></div>
          </div>
          <div className="max-w-7xl mx-auto px-6 relative z-10 text-center space-y-12">
-            <span className="text-[#007BFF] font-black text-xs uppercase tracking-[0.8em] block">Máte připravený brief?</span>
-            <h2 className="text-6xl md:text-[100px] font-black uppercase tracking-tighter leading-none">POJĎME TO <br /><span className="text-[#007BFF]">ZREALIZOVAT.</span></h2>
+            <span className="text-[#007BFF] font-black text-xs uppercase tracking-[0.8em] block">Potřebujete profesionální vizuál?</span>
+            <h2 className="text-6xl md:text-[100px] font-black uppercase tracking-tighter leading-none drop-shadow-2xl">Pojďme to <br /><span className="text-[#007BFF]">natočit a vyfotit.</span></h2>
             <div className="pt-8 flex flex-col md:flex-row items-center justify-center gap-8">
-               <Link to="/kontakt" className="bg-white text-black px-16 py-6 text-[12px] font-black uppercase tracking-[0.5em] hover:bg-[#007BFF] hover:text-white transition-all shadow-2xl flex items-center gap-4">
-                 POPTAT TERMÍN <MessageSquare size={18} />
-               </Link>
-               <Link to="/portfolio" className="border-2 border-white/20 text-white px-16 py-6 text-[12px] font-black uppercase tracking-[0.5em] hover:bg-white hover:text-black transition-all">
-                 UKÁZKY PRACÍ
+               <Link to="/kontakt" className="bg-[#007BFF] text-white px-16 py-6 text-[12px] font-black uppercase tracking-[0.5em] hover:bg-white hover:text-black transition-all shadow-2xl flex items-center gap-4">
+                 NEZÁVAZNÁ POPTÁVKA <MessageSquare size={18} />
                </Link>
             </div>
          </div>
       </section>
 
-      {/* 8. RECENZE SECTION (POD CTA) */}
+      {/* 8. RECENZE */}
       <section className="py-32 bg-white">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="mb-20">
-            <span className="text-[#007BFF] font-black text-xs uppercase tracking-[0.7em] block mb-4">Zkušenosti klientů</span>
-            <h2 className="text-5xl md:text-7xl font-black uppercase tracking-tighter text-black">Co o mně říkají</h2>
+          <div className="mb-20 text-center">
+            <span className="text-[#007BFF] font-black text-xs uppercase tracking-[0.7em] block mb-4">Reference</span>
+            <h2 className="text-5xl md:text-7xl font-black uppercase tracking-tighter text-black">Zpětná vazba</h2>
           </div>
-          
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {reviews.slice(0, 3).map((review) => (
-              <div key={review.id} className="bg-gray-50 p-10 relative group hover:bg-black transition-all duration-500">
-                <Quote className="absolute top-6 right-6 text-gray-200 group-hover:text-white/10 transition-colors" size={48} />
+              <div key={review.id} className="bg-gray-50 p-10 border border-gray-100 relative group hover:border-[#007BFF] transition-all duration-500 shadow-sm">
+                <Quote className="absolute top-6 right-6 text-[#007BFF]/5 group-hover:text-[#007BFF]/10 transition-colors" size={48} />
                 <div className="flex gap-1 mb-8">
-                  {[...Array(review.rating)].map((_, i) => (
-                    <Star key={i} size={14} fill="currentColor" className="text-[#007BFF]" />
-                  ))}
+                  {[...Array(review.rating)].map((_, i) => <Star key={i} size={14} fill="currentColor" className="text-[#007BFF]" />)}
                 </div>
-                <p className="text-gray-600 text-lg font-medium leading-relaxed mb-10 group-hover:text-white/80 transition-colors">
+                <p className="text-gray-600 text-lg font-medium leading-relaxed mb-10 group-hover:text-black transition-colors">
                   "{review.text}"
                 </p>
-                <div className="pt-8 border-t border-gray-200 group-hover:border-white/10 transition-colors">
-                  <h4 className="font-black uppercase tracking-widest text-[11px] text-black group-hover:text-white">{review.author}</h4>
-                  <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-1 block">Ověřený klient</span>
+                <div className="pt-8 border-t border-gray-200">
+                  <h4 className="font-black uppercase tracking-widest text-[11px] text-black">{review.author}</h4>
+                  <span className="text-[9px] font-bold text-[#007BFF] uppercase tracking-widest mt-1 block">Spolupracující klient</span>
                 </div>
               </div>
             ))}
           </div>
         </div>
       </section>
+
+      <style>{`
+        @keyframes marquee {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-33.33%); }
+        }
+      `}</style>
     </div>
   );
 };

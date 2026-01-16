@@ -18,7 +18,10 @@ import {
   Award,
   Zap,
   ExternalLink,
-  BookOpen
+  BookOpen,
+  WifiOff,
+  AlertTriangle,
+  Database
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import FileManager from '../components/Admin/FileManager';
@@ -30,12 +33,14 @@ import InquiryManager from '../components/Admin/InquiryManager';
 import WebSettingsManager from '../components/Admin/WebSettingsManager';
 import SystemManager from '../components/Admin/SystemManager';
 import { SPECIALIZATIONS } from '../constants';
+import { checkFirestoreConnection } from '../lib/db';
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'files' | 'projects' | 'blog' | 'settings' | 'reviews' | 'partners' | 'inquiries' | 'web-settings'>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [stats, setStats] = useState<any>(null);
+  const [isOnline, setIsOnline] = useState<boolean | null>(null);
 
   useEffect(() => {
     const isAuth = localStorage.getItem('admin_auth');
@@ -43,14 +48,17 @@ const AdminDashboard: React.FC = () => {
       navigate('/');
     }
     
-    const loadStats = () => {
+    const loadData = async () => {
       const savedStats = localStorage.getItem('jakub_minka_stats');
       if (savedStats) setStats(JSON.parse(savedStats));
+      
+      const connection = await checkFirestoreConnection();
+      setIsOnline(connection);
     };
 
-    loadStats();
-    window.addEventListener('storage', loadStats);
-    return () => window.removeEventListener('storage', loadStats);
+    loadData();
+    window.addEventListener('storage', loadData);
+    return () => window.removeEventListener('storage', loadData);
   }, [navigate]);
 
   const handleLogout = () => {
@@ -126,6 +134,31 @@ const AdminDashboard: React.FC = () => {
       </aside>
 
       <main className={`flex-grow transition-all duration-500 ${isSidebarOpen ? 'pl-72' : 'pl-20'}`}>
+        <AnimatePresence>
+          {isOnline === false && (
+            <motion.div 
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="bg-amber-500 text-white px-10 py-3 flex items-center justify-between overflow-hidden"
+            >
+              <div className="flex items-center gap-4">
+                <WifiOff size={18} />
+                <p className="text-[10px] font-black uppercase tracking-widest">
+                  Pozor: Firebase Cloud Firestore není aktivní. Aplikace běží v <span className="underline">offline režimu</span> (LocalStorage).
+                </p>
+              </div>
+              <a 
+                href="https://console.firebase.google.com/" 
+                target="_blank" 
+                className="text-[9px] font-black uppercase tracking-widest bg-black/20 px-4 py-1.5 hover:bg-black/40 transition-all flex items-center gap-2"
+              >
+                Aktivovat v Console <ExternalLink size={12} />
+              </a>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <header className="h-20 bg-white border-b border-gray-100 flex items-center justify-between px-10 sticky top-0 z-40">
           <div className="flex items-center gap-4">
              <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-gray-50 rounded-full transition-colors">
@@ -136,6 +169,12 @@ const AdminDashboard: React.FC = () => {
              </h1>
           </div>
           <div className="flex items-center gap-8">
+            <div className="flex items-center gap-4 px-4 py-2 bg-gray-50 rounded-full border border-gray-100">
+               <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]'}`}></div>
+               <span className="text-[8px] font-black uppercase tracking-widest text-gray-500">
+                 {isOnline ? 'Cloud Synchronizován' : 'Lokální Režim'}
+               </span>
+            </div>
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 bg-[#007BFF] rounded-full flex items-center justify-center text-white font-black text-xs shadow-md">JM</div>
               <div className="hidden lg:block text-left">
@@ -160,6 +199,24 @@ const AdminDashboard: React.FC = () => {
               
               {activeTab === 'dashboard' && (
                 <div className="space-y-10">
+                  {isOnline === false && (
+                    <div className="bg-white p-8 border-l-4 border-l-amber-500 shadow-sm rounded-sm flex items-start gap-6">
+                      <div className="p-4 bg-amber-50 text-amber-500 rounded-sm">
+                        <AlertTriangle size={32} />
+                      </div>
+                      <div className="space-y-2">
+                        <h3 className="text-sm font-black uppercase tracking-widest">Backend vyžaduje nastavení</h3>
+                        <p className="text-xs text-gray-500 font-medium leading-relaxed">
+                          Váš Firebase kód v <code className="bg-gray-100 px-1 rounded text-black">lib/db.ts</code> obsahuje placeholder klíče nebo Firestore API není aktivováno.
+                          Nyní používáte LocalStorage – data se ukládají pouze ve vašem prohlížeči a nejsou sdílena s ostatními uživateli.
+                        </p>
+                        <div className="flex gap-4 pt-2">
+                           <button onClick={() => setActiveTab('settings')} className="text-[9px] font-black uppercase tracking-widest text-[#007BFF] hover:underline">Jak to opravit?</button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                     <div className="bg-white p-8 border border-gray-100 shadow-sm rounded-sm">
                       <div className="flex justify-between items-start mb-4">
@@ -226,12 +283,12 @@ const AdminDashboard: React.FC = () => {
                     <div className="lg:col-span-5 space-y-8">
                        <div className="bg-black text-white p-10 rounded-sm space-y-6 relative overflow-hidden">
                           <div className="absolute top-0 right-0 w-32 h-32 bg-[#007BFF] opacity-20 blur-3xl"></div>
-                          <h3 className="text-xs font-black uppercase tracking-widest text-[#007BFF]">SEO & Výkon</h3>
+                          <h3 className="text-xs font-black uppercase tracking-widest text-[#007BFF]">Data & Synchro</h3>
                           <p className="text-sm font-medium leading-relaxed opacity-70">
-                            Průměrná úspora místa díky automatické kompresi je v současnosti cca 70 %. To zrychluje načítání webu o 1.2s.
+                            {isOnline ? 'Vaše data jsou bezpečně uložena v Google Cloud Firestore.' : 'Aplikace aktuálně ukládá data do LocalStorage vašeho prohlížeče. Pro trvalé uložení v cloudu aktivujte Firebase API.'}
                           </p>
                           <button onClick={() => setActiveTab('settings')} className="text-[9px] font-black uppercase tracking-widest flex items-center gap-2 hover:text-[#007BFF] transition-colors">
-                            Nastavení systému <ChevronRight size={14} />
+                            {isOnline ? 'Export dat' : 'Nastavení připojení'} <ChevronRight size={14} />
                           </button>
                        </div>
                     </div>
