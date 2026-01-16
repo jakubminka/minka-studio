@@ -3,7 +3,7 @@ import React, { useMemo, useState } from 'react';
 import { Project, MediaType } from '../types';
 import { Play, Camera, ArrowUpRight, Layers } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 interface MasonryGridProps {
   projects: Project[];
@@ -21,6 +21,7 @@ const shuffleArray = <T extends object>(array: T[]): T[] => {
 
 const ProjectItem: React.FC<{ project: Project, weight: number, showSpecialization: boolean }> = ({ project, weight, showSpecialization }) => {
   const [isLoaded, setIsLoaded] = useState(false);
+  const navigate = useNavigate();
 
   const getMediaLabel = (type: MediaType) => {
     switch (type) {
@@ -28,6 +29,12 @@ const ProjectItem: React.FC<{ project: Project, weight: number, showSpecializati
       case MediaType.BOTH: return <><Layers size={10} /> KOMBO</>;
       default: return <><Camera size={10} /> FOTO</>;
     }
+  };
+
+  const handleSpecClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    navigate(`/portfolio?spec=${project.categoryId}`);
   };
 
   return (
@@ -61,9 +68,12 @@ const ProjectItem: React.FC<{ project: Project, weight: number, showSpecializati
               {getMediaLabel(project.type)}
             </span>
             {showSpecialization && (
-              <span className="bg-white/10 backdrop-blur-md px-4 py-1.5 text-[8px] font-black uppercase tracking-widest border border-white/10 text-white/80">
+              <button 
+                onClick={handleSpecClick}
+                className="pointer-events-auto bg-white/10 backdrop-blur-md px-4 py-1.5 text-[8px] font-black uppercase tracking-widest border border-white/10 text-white/80 hover:bg-[#007BFF] hover:text-white transition-all"
+              >
                 {project.category}
-              </span>
+              </button>
             )}
           </div>
           

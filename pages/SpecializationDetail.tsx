@@ -1,15 +1,18 @@
 
 import React, { useEffect, useState } from 'react';
-import { useParams, Navigate, useLocation } from 'react-router-dom';
+import { useParams, Navigate, useLocation, Link } from 'react-router-dom';
 import { SPECIALIZATIONS, PROJECTS } from '../constants';
 import { CheckCircle2, ArrowRight, ChevronDown } from 'lucide-react';
 import MasonryGrid from '../components/MasonryGrid';
 import { motion } from 'framer-motion';
+import { dataStore } from '../lib/db';
+import { WebSettings } from '../types';
 
 const SpecializationDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { pathname } = useLocation();
   const [headerUrl, setHeaderUrl] = useState<string | null>(null);
+  const [projects, setProjects] = useState(PROJECTS);
   const spec = SPECIALIZATIONS.find(s => s.id === id);
 
   useEffect(() => {
@@ -21,13 +24,19 @@ const SpecializationDetail: React.FC = () => {
                         'fotograf a kameraman';
       document.title = `${spec.name} | ${seoSuffix} | Jakub Minka`;
     }
-    const saved = localStorage.getItem('jakub_minka_web_settings');
-    if (saved && spec) {
-      const settings = JSON.parse(saved);
-      if (settings.specializationHeaders && settings.specializationHeaders[spec.id]) {
-        setHeaderUrl(settings.specializationHeaders[spec.id]);
+    
+    const load = async () => {
+      const savedProjects = await dataStore.collection('projects').getAll();
+      if (savedProjects.length > 0) setProjects(savedProjects);
+
+      const savedSettings: WebSettings = await dataStore.doc('web_settings').get();
+      if (savedSettings && spec) {
+        if (savedSettings.specializationHeaders && savedSettings.specializationHeaders[spec.id]) {
+          setHeaderUrl(savedSettings.specializationHeaders[spec.id]);
+        }
       }
-    }
+    };
+    load();
   }, [id, pathname, spec]);
 
   const scrollToPortfolio = () => {
@@ -41,12 +50,12 @@ const SpecializationDetail: React.FC = () => {
     return <Navigate to="/" />;
   }
 
-  const filteredProjects = PROJECTS.filter(p => p.categoryId === spec.id);
+  const filteredProjects = projects.filter(p => p.categoryId === spec.id);
 
   return (
     <div className="w-full">
-      {/* Detail Header - Ultra Stable Layout */}
-      <header className="relative h-[70vh] bg-black text-white flex items-center justify-center overflow-hidden" style={{ contain: 'layout style' }}>
+      {/* Detail Header */}
+      <header className="relative h-[70vh] bg-black text-white flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 bg-black/60 z-10"></div>
         <motion.img 
           key={headerUrl || spec.image}
@@ -55,46 +64,23 @@ const SpecializationDetail: React.FC = () => {
           transition={{ duration: 1 }}
           src={headerUrl || spec.image} 
           alt={spec.name} 
-          className="absolute inset-0 w-full h-full object-cover" 
-          style={{ willChange: 'opacity' }}
+          className="absolute inset-0 w-full h-full object-cover grayscale" 
         />
         
-        {/* Text Container with Fixed Centering */}
-        <div className="relative z-20 text-center px-6 w-full max-w-5xl flex flex-col items-center justify-center min-h-[300px]" style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}>
-          <div className="h-8 mb-6 overflow-hidden">
-            <motion.span 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-[#007BFF] font-black text-xs uppercase tracking-[0.6em] block"
-              style={{ textRendering: 'optimizeLegibility' }}
-            >
-              Specializace
-            </motion.span>
-          </div>
-
-          <div className="min-h-[120px] flex items-center justify-center mb-8">
-            <motion.h1 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.1 }}
-              className="text-4xl md:text-8xl font-black tracking-tighter uppercase leading-tight w-full"
-              style={{ transform: 'translateZ(0)', textRendering: 'optimizeLegibility' }}
-            >
-              {spec.name}
-            </motion.h1>
-          </div>
-
-          <div className="h-20">
-            <motion.button
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
-              onClick={scrollToPortfolio}
-              className="lg:hidden flex items-center gap-2 bg-[#007BFF] text-white px-8 py-4 text-[10px] font-black uppercase tracking-[0.3em] rounded-sm shadow-2xl"
-            >
-              ZOBRAZIT PROJEKTY <ChevronDown size={14} className="animate-bounce" />
-            </motion.button>
-          </div>
+        <div className="relative z-20 text-center px-6 w-full max-w-5xl flex flex-col items-center justify-center">
+          <span className="text-[#007BFF] font-black text-xs uppercase tracking-[0.6em] block mb-6">Specializace</span>
+          <h1 className="text-4xl md:text-8xl font-black tracking-tighter uppercase leading-tight w-full mb-10">
+            {spec.name}
+          </h1>
+          <motion.button
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            onClick={scrollToPortfolio}
+            className="flex items-center gap-4 bg-[#007BFF] text-white px-10 py-5 text-[10px] font-black uppercase tracking-[0.3em] rounded-sm shadow-2xl hover:bg-white hover:text-black transition-all"
+          >
+            ZOBRAZIT VÝSLEDKY <ChevronDown size={14} className="animate-bounce" />
+          </motion.button>
         </div>
       </header>
 
@@ -110,17 +96,13 @@ const SpecializationDetail: React.FC = () => {
             <h3 className="text-sm font-black uppercase tracking-[0.4em] text-gray-400">Co vše nabízím v této sekci</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
               {spec.caseStudies.map((caseStudy, idx) => (
-                <motion.div 
+                <div 
                   key={idx}
-                  initial={{ opacity: 0 }}
-                  whileInView={{ opacity: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: idx * 0.05 }}
                   className="flex gap-4 items-start py-4 border-b border-gray-100 group hover:border-[#007BFF] transition-colors"
                 >
                   <span className="text-[10px] font-black text-[#007BFF] mt-1 shrink-0">{String(idx + 1).padStart(2, '0')}</span>
                   <p className="text-gray-800 font-bold group-hover:text-[#007BFF] transition-colors text-sm md:text-base">{caseStudy}</p>
-                </motion.div>
+                </div>
               ))}
             </div>
           </div>
@@ -151,9 +133,9 @@ const SpecializationDetail: React.FC = () => {
             <span className="text-[#007BFF] font-black text-xs uppercase tracking-[0.5em] block mb-4">Výběr z realizací</span>
             <h2 className="text-4xl md:text-5xl font-black tracking-tighter uppercase">Ukázka mé práce</h2>
           </div>
-          <p className="text-gray-400 max-w-sm text-[10px] md:text-xs uppercase font-bold tracking-widest">
-            Reálné výstupy foto i video v oboru {spec.name}.
-          </p>
+          <div className="flex gap-4">
+            <Link to={`/portfolio?spec=${spec.id}`} className="bg-black text-white px-10 py-4 text-[10px] font-black uppercase tracking-widest hover:bg-[#007BFF] transition-all">Zobrazit celé portfolio</Link>
+          </div>
         </div>
         
         <MasonryGrid projects={filteredProjects} showSpecialization={false} />

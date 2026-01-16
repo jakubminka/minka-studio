@@ -6,6 +6,7 @@ import { Project, WebSettings, Review } from '../types';
 import { Link } from 'react-router-dom';
 import MasonryGrid from '../components/MasonryGrid';
 import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion';
+import { dataStore } from '../lib/db';
 
 const Home: React.FC = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -14,9 +15,14 @@ const Home: React.FC = () => {
   const [reviews, setReviews] = useState<Review[]>(DEFAULT_REVIEWS);
   const [hoverSide, setHoverSide] = useState<'left' | 'right' | null>(null);
   const [settings, setSettings] = useState<WebSettings>({
-    homeAboutTitle: 'Vizuální příběhy, které prodávají',
+    homeHeader: '', portfolioHeader: '', contactHeader: '', blogHeader: '', specializationHeaders: {},
+    homeHeroTitle: 'VIZUÁLNÍ PŘÍBĚHY, KTERÉ PRODÁVAJÍ',
+    homeHeroSubtitle: 'FOTOGRAF & KAMERAMAN',
+    homeAboutTitle: 'O MNĚ',
     homeAboutText: 'Jsem fotograf a kameraman se zaměřením na komerční tvorbu, architekturu a průmysl. Mým cílem je zachytit podstatu vašeho projektu tak, aby oslovila ty správné lidi.',
     profilePic: 'https://picsum.photos/id/64/800/800',
+    specificationsTitle: 'SPECIALIZACE', specificationsSubtitle: 'CO PRO VÁS MOHU UDĚLAT',
+    contactTitle: 'KONTAKT', contactSubtitle: 'POJĎME TVOŘIT',
     pricingTitle: 'Investice do vizuálu',
     pricingSubtitle: 'Cena není fixní',
     price1Title: 'Menší produkce',
@@ -25,7 +31,7 @@ const Home: React.FC = () => {
     price2Title: 'Větší kampaň',
     price2Value: 'od 15.000 Kč',
     price2Desc: 'Celodenní produkce, reklamní video, dron...',
-    contactHeader: '', blogHeader: '', portfolioHeader: '', specializationHeaders: {}, bio: '', ico: '', dic: '', address: '', phone: '', email: '', footerDescription: '', doc1Name: '', doc1Url: '', doc2Name: '', doc2Url: '', backstage: [], instagramUrl: '', facebookUrl: '', youtubeUrl: '', linkedinUrl: '', pricingCta: 'Poptat projekt →'
+    bio: '', ico: '', dic: '', address: '', phone: '', email: '', footerDescription: '', doc1Name: '', doc1Url: '', doc2Name: '', doc2Url: '', backstage: [], instagramUrl: '', facebookUrl: '', youtubeUrl: '', linkedinUrl: '', pricingCta: 'Poptat projekt →'
   });
   
   const mouseX = useMotionValue(0);
@@ -35,12 +41,21 @@ const Home: React.FC = () => {
 
   useEffect(() => {
     const load = async () => {
-      const savedProjects = localStorage.getItem('jakub_minka_projects');
-      if (savedProjects) setProjects(JSON.parse(savedProjects));
-      const savedSettings = localStorage.getItem('jakub_minka_web_settings');
-      if (savedSettings) setSettings(prev => ({ ...prev, ...JSON.parse(savedSettings) }));
+      const savedProjects = await dataStore.collection('projects').getAll();
+      if (savedProjects.length > 0) setProjects(savedProjects);
+      
+      const savedSettings = await dataStore.doc('web_settings').get();
+      if (savedSettings) setSettings(prev => ({ ...prev, ...savedSettings }));
+
+      const savedPartners = await dataStore.collection('partners').getAll();
+      if (savedPartners) setPartners(savedPartners);
+
+      const savedReviews = await dataStore.collection('reviews').getAll();
+      if (savedReviews.length > 0) setReviews(savedReviews);
     };
     load();
+    window.addEventListener('storage', load);
+    return () => window.removeEventListener('storage', load);
   }, []);
 
   const homePortfolioProjects = useMemo(() => {
@@ -71,8 +86,7 @@ const Home: React.FC = () => {
 
   const partnerList = partners.length > 0 ? partners : [
     {id: '1', name: 'Skoda Auto'}, {id: '2', name: 'Red Bull'}, {id: '3', name: 'STRABAG'}, 
-    {id: '4', name: 'Metrostav'}, {id: '5', name: 'Volvo'}, {id: '6', name: 'Siemens'},
-    {id: '7', name: 'Cemex'}, {id: '8', name: 'Eurovia'}, {id: '9', name: 'Penta Real Estate'}
+    {id: '4', name: 'Metrostav'}, {id: '5', name: 'Volvo'}, {id: '6', name: 'Siemens'}
   ];
 
   return (
@@ -97,20 +111,31 @@ const Home: React.FC = () => {
         <div className="absolute inset-y-0 right-0 w-[15%] z-30 cursor-none" onClick={handleNext}></div>
 
         <div className="absolute inset-0 z-0 h-full w-full">
-          {heroProjects.map((project, idx) => (
+          {heroProjects.length > 0 ? heroProjects.map((project, idx) => (
             <div key={`bg-${project.id}`} className={`absolute inset-0 h-full w-full transition-opacity duration-[1500ms] ease-in-out ${idx === currentSlide ? 'opacity-100' : 'opacity-0'}`}>
               <div className="absolute inset-0 bg-gradient-to-b from-[#0A192F]/60 to-[#0A192F]/90 z-10"></div>
               <img src={project.thumbnailUrl} alt="" className="w-full h-full object-cover grayscale opacity-60" />
             </div>
-          ))}
+          )) : (
+            <div className="absolute inset-0 h-full w-full">
+              <div className="absolute inset-0 bg-[#0A192F] z-10 opacity-80"></div>
+              <img src={settings.homeHeader || 'https://images.unsplash.com/photo-1492724441997-5dc865305da7?auto=format&fit=crop&q=80&w=2000'} className="w-full h-full object-cover grayscale" />
+            </div>
+          )}
         </div>
 
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center px-6 pointer-events-none">
           <AnimatePresence mode="wait">
             <motion.div key={currentSlide} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -30 }} transition={{ duration: 0.8 }} className="flex flex-col items-center">
-              <span className="bg-[#007BFF] text-white font-black text-[9px] uppercase tracking-[0.5em] px-6 py-2.5 mb-8 shadow-xl">{activeProject?.category}</span>
-              <h1 className="text-5xl md:text-8xl lg:text-[140px] font-black mb-14 tracking-tighter leading-[0.8] uppercase drop-shadow-2xl">{activeProject?.title}</h1>
-              <Link to={`/projekt/${activeProject?.id}`} className="pointer-events-auto border-2 border-[#007BFF] px-14 py-5 text-[11px] font-black uppercase tracking-[0.6em] hover:bg-white hover:text-black transition-all bg-[#007BFF]/20 backdrop-blur-md">PROHLÉDNOUT</Link>
+              <span className="bg-[#007BFF] text-white font-black text-[9px] uppercase tracking-[0.5em] px-6 py-2.5 mb-8 shadow-xl">
+                {activeProject?.category || settings.homeHeroSubtitle}
+              </span>
+              <h1 className="text-4xl md:text-8xl lg:text-[140px] font-black mb-14 tracking-tighter leading-[0.8] uppercase drop-shadow-2xl max-w-7xl">
+                {activeProject?.title || settings.homeHeroTitle}
+              </h1>
+              <Link to={activeProject ? `/projekt/${activeProject.id}` : '/portfolio'} className="pointer-events-auto border-2 border-[#007BFF] px-14 py-5 text-[11px] font-black uppercase tracking-[0.6em] hover:bg-white hover:text-black transition-all bg-[#007BFF]/20 backdrop-blur-md">
+                {activeProject ? 'PROHLÉDNOUT' : 'VSTOUPIT'}
+              </Link>
             </motion.div>
           </AnimatePresence>
         </div>
@@ -126,15 +151,15 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* 2. O MNĚ - SUPPORTS HTML CONTENT */}
+      {/* 2. O MNĚ */}
       <section className="py-32 bg-white overflow-hidden">
         <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-24 items-center">
           <div className="relative group">
             <div className="absolute -top-6 -left-6 w-32 h-32 border-l-4 border-t-4 border-[#007BFF] -z-10 group-hover:scale-110 transition-transform"></div>
             <img src={settings.profilePic} className="w-full aspect-[4/5] object-cover grayscale hover:grayscale-0 transition-all duration-1000 shadow-2xl" alt="Jakub Minka" />
             <div className="absolute -bottom-8 -right-8 bg-white border border-gray-100 shadow-2xl p-10 hidden md:block">
-              <p className="text-4xl font-black tracking-tighter uppercase leading-none text-black">12+ LET</p>
-              <p className="text-[10px] font-black uppercase tracking-widest text-[#007BFF] mt-2">ZKUŠENOSTÍ V OBORU</p>
+              <p className="text-4xl font-black tracking-tighter uppercase leading-none text-black">PROFI</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-[#007BFF] mt-2">PŘÍSTUP K TVORBĚ</p>
             </div>
           </div>
           <div className="space-y-10">
@@ -158,7 +183,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* 3. MARQUEE - DARK BLUE THEME */}
+      {/* 3. MARQUEE */}
       <section className="py-24 bg-[#0A192F] border-y border-white/5 overflow-hidden relative">
         <div className="max-w-7xl mx-auto px-6 mb-12 relative z-10">
           <h3 className="text-[10px] font-black uppercase tracking-[0.5em] text-[#007BFF] italic">Spolupracoval jsem s</h3>
@@ -174,20 +199,20 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* 4. SPECIALIZACE - DARK/BLUE GRID */}
+      {/* 4. SPECIALIZACE */}
       <section className="py-32 bg-white">
         <div className="max-w-7xl mx-auto px-6 mb-20">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-10">
              <div className="space-y-4">
                <span className="text-[#007BFF] font-black text-xs uppercase tracking-[0.7em] block">Služby na míru</span>
-               <h2 className="text-5xl md:text-7xl font-black tracking-tighter leading-none text-black uppercase">Specializace</h2>
+               <h2 className="text-5xl md:text-7xl font-black tracking-tighter leading-none text-black uppercase">{settings.specificationsTitle}</h2>
              </div>
           </div>
         </div>
         <div className="max-w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 bg-black">
            {SPECIALIZATIONS.map(spec => (
              <Link key={spec.id} to={spec.externalUrl ? '#' : `/specializace/${spec.id}`} onClick={e => spec.externalUrl && window.open(spec.externalUrl, '_blank')} className="group relative aspect-square overflow-hidden border border-white/5">
-                <img src={spec.image} className="w-full h-full object-cover opacity-40 grayscale group-hover:scale-110 group-hover:opacity-60 group-hover:grayscale-0 transition-all duration-1000" />
+                <img src={settings.specializationHeaders?.[spec.id] || spec.image} className="w-full h-full object-cover opacity-40 grayscale group-hover:scale-110 group-hover:opacity-60 group-hover:grayscale-0 transition-all duration-1000" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent z-10"></div>
                 <div className="absolute inset-0 p-8 flex flex-col justify-end z-20">
                    <h4 className="text-xl md:text-2xl font-black text-white uppercase tracking-tighter group-hover:text-[#007BFF] transition-colors leading-tight">{spec.name}</h4>
@@ -216,7 +241,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* 6. CENÍK - SUPPORTS HTML DESCRIPTIONS */}
+      {/* 6. CENÍK */}
       <section className="py-32 bg-blue-50/30 relative overflow-hidden border-y border-blue-100">
         <div className="max-w-7xl mx-auto px-6 flex flex-col lg:flex-row items-center gap-24">
           <div className="lg:w-1/2 space-y-10">
@@ -253,22 +278,6 @@ const Home: React.FC = () => {
             </div>
           </div>
         </div>
-      </section>
-
-      {/* 7. FINAL CTA */}
-      <section className="py-40 bg-[#0A192F] text-white relative overflow-hidden">
-         <div className="absolute inset-0 z-0">
-           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#007BFF] opacity-5 blur-[120px] rounded-full"></div>
-         </div>
-         <div className="max-w-7xl mx-auto px-6 relative z-10 text-center space-y-12">
-            <span className="text-[#007BFF] font-black text-xs uppercase tracking-[0.8em] block">Potřebujete profesionální vizuál?</span>
-            <h2 className="text-6xl md:text-[100px] font-black uppercase tracking-tighter leading-none drop-shadow-2xl">Pojďme to <br /><span className="text-[#007BFF]">natočit a vyfotit.</span></h2>
-            <div className="pt-8 flex flex-col md:flex-row items-center justify-center gap-8">
-               <Link to="/kontakt" className="bg-[#007BFF] text-white px-16 py-6 text-[12px] font-black uppercase tracking-[0.5em] hover:bg-white hover:text-black transition-all shadow-2xl flex items-center gap-4">
-                 NEZÁVAZNÁ POPTÁVKA <MessageSquare size={18} />
-               </Link>
-            </div>
-         </div>
       </section>
 
       {/* 8. RECENZE */}

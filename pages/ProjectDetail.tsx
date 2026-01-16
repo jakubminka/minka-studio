@@ -68,9 +68,12 @@ const ProjectDetail: React.FC = () => {
             <span className={`px-5 py-2 text-[9px] font-black uppercase tracking-[0.2em] text-white ${getMediaColor(project.type)}`}>
               {project.type.toUpperCase()}
             </span>
-            <span className="bg-white/10 backdrop-blur-md px-5 py-2 text-[9px] font-black uppercase tracking-[0.2em] border border-white/20 text-white">
+            <Link 
+              to={`/portfolio?spec=${project.categoryId}`}
+              className="bg-white/10 backdrop-blur-md px-5 py-2 text-[9px] font-black uppercase tracking-[0.2em] border border-white/20 text-white hover:bg-[#007BFF] hover:border-[#007BFF] transition-all"
+            >
               {project.category}
-            </span>
+            </Link>
           </div>
           <motion.h1 
             initial={{ opacity: 0, y: 20 }}

@@ -68,34 +68,50 @@ export interface Specialization {
 }
 
 export interface WebSettings {
+  // Page Headers
+  homeHeader: string;
   portfolioHeader: string;
   contactHeader: string;
   blogHeader: string;
   specializationHeaders: Record<string, string>;
-  profilePic: string;
-  bio: string;
+  
+  // Home Page
+  homeHeroTitle: string;
+  homeHeroSubtitle: string;
   homeAboutTitle: string;
   homeAboutText: string;
+  profilePic: string;
+  
+  // Specializations Page
+  specificationsTitle: string;
+  specificationsSubtitle: string;
+
+  // Contact & Bio
+  contactTitle: string;
+  contactSubtitle: string;
+  bio: string;
   ico: string;
   dic: string;
   address: string;
   phone: string;
   email: string;
   footerDescription: string;
+  
+  // Legal
   doc1Name: string;
   doc1Url: string;
   doc2Name: string;
   doc2Url: string;
-  backstage: string[];
-  // Policy Content
   privacyContent?: string;
   termsContent?: string;
-  // Social links
+
+  // Socials
   instagramUrl: string;
   facebookUrl: string;
   youtubeUrl: string;
   linkedinUrl: string;
-  // Pricing section
+
+  // Pricing
   pricingTitle: string;
   pricingSubtitle: string;
   price1Title: string;
@@ -105,6 +121,9 @@ export interface WebSettings {
   price2Value: string;
   price2Desc: string;
   pricingCta: string;
+  
+  // Extra
+  backstage: string[];
 }
 
 export interface Review {

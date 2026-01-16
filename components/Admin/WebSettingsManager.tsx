@@ -1,54 +1,68 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Save, Image as ImageIcon, User, X, HardDrive, Wallet, Phone, Mail, 
+  Save, Image as ImageIcon, User, X, Layout, Wallet, Phone, Mail, 
   Globe, ChevronRight, Folder, MessageSquare, Instagram, Facebook, 
   Youtube, Linkedin, Info, Upload, Plus, FileText, Shield, 
-  Bold, Italic, List, ListOrdered, RefreshCw, CheckCircle2, Search, MapPin, Building2,
-  Type, AlignLeft
+  Bold, Italic, List, RefreshCw, CheckCircle2, Search, MapPin, 
+  Monitor, Smartphone, Type, AlignLeft, Camera, Layers, ArrowUpRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { WebSettings, FileItem } from '../../types';
-import { mediaDB, dataStore, storage, optimizeImage } from '../../lib/db';
+import { mediaDB, dataStore } from '../../lib/db';
 import { SPECIALIZATIONS } from '../../constants';
 
 const WebSettingsManager: React.FC = () => {
   const [settings, setSettings] = useState<WebSettings>({
-    portfolioHeader: '', contactHeader: '', blogHeader: '', specializationHeaders: {},
-    profilePic: '', bio: '', homeAboutTitle: '', homeAboutText: '',
-    ico: '', dic: '', address: '', phone: '', email: '', footerDescription: '',
+    homeHeader: '', portfolioHeader: '', contactHeader: '', blogHeader: '', specializationHeaders: {},
+    homeHeroTitle: 'VIZUÁLNÍ PŘÍBĚHY, KTERÉ PRODÁVAJÍ',
+    homeHeroSubtitle: 'FOTOGRAF & KAMERAMAN',
+    homeAboutTitle: 'O MNĚ',
+    homeAboutText: '',
+    profilePic: '',
+    specificationsTitle: 'SPECIALIZACE',
+    specificationsSubtitle: 'CO PRO VÁS MOHU UDĚLAT',
+    contactTitle: 'KONTAKT',
+    contactSubtitle: 'POJĎME TVOŘIT',
+    bio: '', ico: '', dic: '', address: '', phone: '', email: '', footerDescription: '',
     doc1Name: 'Ochrana soukromí', doc1Url: '#', doc2Name: 'Podmínky spolupráce', doc2Url: '#',
     backstage: [], instagramUrl: '', facebookUrl: '', youtubeUrl: '', linkedinUrl: '',
-    pricingTitle: '', pricingSubtitle: '',
-    price1Title: '', price1Value: '', price1Desc: '',
-    price2Title: '', price2Value: '', price2Desc: '',
-    pricingCta: '',
+    pricingTitle: 'CENÍK SLUŽEB', pricingSubtitle: 'INVESTICE DO VIZUÁLU',
+    price1Title: 'FOTO PRODUKCE', price1Value: 'od 5.000 Kč', price1Desc: '',
+    price2Title: 'VIDEO PRODUKCE', price2Value: 'od 15.000 Kč', price2Desc: '',
+    pricingCta: 'POPTAT PROJEKT',
     privacyContent: '',
     termsContent: ''
   });
 
-  const [activeTab, setActiveTab] = useState<'visuals' | 'content' | 'backstage' | 'footer' | 'docs'>('visuals');
+  const [activeTab, setActiveTab] = useState<'home' | 'portfolio' | 'specs' | 'contact' | 'footer' | 'legal'>('home');
   const [showPicker, setShowPicker] = useState(false);
-  const [pickerTarget, setPickerTarget] = useState<string | null>(null);
+  const [pickerTarget, setPickerTarget] = useState<{key: string, isSpec?: boolean} | null>(null);
   const [allItems, setAllItems] = useState<FileItem[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Editor Refs
-  const homeAboutEditorRef = useRef<HTMLDivElement>(null);
-  const price1EditorRef = useRef<HTMLDivElement>(null);
-  const price2EditorRef = useRef<HTMLDivElement>(null);
-  const privacyEditorRef = useRef<HTMLDivElement>(null);
-  const termsEditorRef = useRef<HTMLDivElement>(null);
+  // WYSIWYG Refs for specific sections
+  const refs = {
+    homeAbout: useRef<HTMLDivElement>(null),
+    price1: useRef<HTMLDivElement>(null),
+    price2: useRef<HTMLDivElement>(null),
+    privacy: useRef<HTMLDivElement>(null),
+    terms: useRef<HTMLDivElement>(null),
+    footerDesc: useRef<HTMLDivElement>(null)
+  };
   
   const loadSettings = async () => {
     const saved = await dataStore.doc('web_settings').get();
     if (saved) {
       setSettings(prev => ({ ...prev, ...saved }));
+      // Hydrate contentEditables
       setTimeout(() => {
-        if (homeAboutEditorRef.current) homeAboutEditorRef.current.innerHTML = saved.homeAboutText || '';
-        if (price1EditorRef.current) price1EditorRef.current.innerHTML = saved.price1Desc || '';
-        if (price2EditorRef.current) price2EditorRef.current.innerHTML = saved.price2Desc || '';
-        if (privacyEditorRef.current) privacyEditorRef.current.innerHTML = saved.privacyContent || '';
-        if (termsEditorRef.current) termsEditorRef.current.innerHTML = saved.termsContent || '';
+        if (refs.homeAbout.current) refs.homeAbout.current.innerHTML = saved.homeAboutText || '';
+        if (refs.price1.current) refs.price1.current.innerHTML = saved.price1Desc || '';
+        if (refs.price2.current) refs.price2.current.innerHTML = saved.price2Desc || '';
+        if (refs.privacy.current) refs.privacy.current.innerHTML = saved.privacyContent || '';
+        if (refs.terms.current) refs.terms.current.innerHTML = saved.termsContent || '';
+        if (refs.footerDesc.current) refs.footerDesc.current.innerHTML = saved.footerDescription || '';
       }, 200);
     }
     const dbItems = await mediaDB.getAll();
@@ -58,177 +72,313 @@ const WebSettingsManager: React.FC = () => {
   useEffect(() => { loadSettings(); }, []);
 
   const saveSettings = async () => {
+    setIsSaving(true);
     const updatedSettings = {
       ...settings,
-      homeAboutText: homeAboutEditorRef.current?.innerHTML || '',
-      price1Desc: price1EditorRef.current?.innerHTML || '',
-      price2Desc: price2EditorRef.current?.innerHTML || '',
-      privacyContent: privacyEditorRef.current?.innerHTML || '',
-      termsContent: termsEditorRef.current?.innerHTML || ''
+      homeAboutText: refs.homeAbout.current?.innerHTML || '',
+      price1Desc: refs.price1.current?.innerHTML || '',
+      price2Desc: refs.price2.current?.innerHTML || '',
+      privacyContent: refs.privacy.current?.innerHTML || '',
+      termsContent: refs.terms.current?.innerHTML || '',
+      footerDescription: refs.footerDesc.current?.innerHTML || ''
     };
     await dataStore.doc('web_settings').set(updatedSettings);
-    alert('Obsah webu byl úspěšně uložen!');
+    setIsSaving(false);
+    alert('Všechny změny byly publikovány!');
   };
 
   const handleEditorCommand = (command: string, value?: string) => {
     document.execCommand(command, false, value);
   };
 
-  const openPicker = (target: string) => {
-    setPickerTarget(target);
+  const openPicker = (key: string, isSpec = false) => {
+    setPickerTarget({ key, isSpec });
     setShowPicker(true);
   };
 
   const selectFromPicker = (url: string) => {
     if (!pickerTarget) return;
-    setSettings({ ...settings, [pickerTarget]: url });
+    if (pickerTarget.isSpec) {
+      setSettings(prev => ({
+        ...prev,
+        specializationHeaders: { ...prev.specializationHeaders, [pickerTarget.key]: url }
+      }));
+    } else {
+      setSettings(prev => ({ ...prev, [pickerTarget.key]: url }));
+    }
     setShowPicker(false);
   };
 
-  const inputClass = "w-full bg-white text-black border-2 border-gray-100 p-4 text-sm font-bold focus:border-[#007BFF] outline-none transition-all placeholder:text-gray-300";
+  const inputClass = "w-full bg-gray-50 text-black border-2 border-gray-100 p-5 font-black uppercase text-xs tracking-widest focus:border-[#007BFF] outline-none transition-all placeholder:text-gray-300";
   
-  const EditorToolbar = ({ onCommand }: { onCommand: (cmd: string, val?: string) => void }) => (
-    <div className="bg-gray-100 border-b p-2 flex gap-1 flex-wrap">
-      <button type="button" onClick={() => onCommand('bold')} className="p-1.5 hover:bg-white rounded transition-colors text-gray-700" title="Tučné"><Bold size={14}/></button>
-      <button type="button" onClick={() => onCommand('italic')} className="p-1.5 hover:bg-white rounded transition-colors text-gray-700" title="Kurzíva"><Italic size={14}/></button>
+  const Toolbar = () => (
+    <div className="bg-gray-100 border-b p-2 flex gap-1 flex-wrap sticky top-0 z-20">
+      <button type="button" onClick={() => handleEditorCommand('bold')} className="p-2 hover:bg-white rounded transition-colors" title="Tučné"><Bold size={16}/></button>
+      <button type="button" onClick={() => handleEditorCommand('italic')} className="p-2 hover:bg-white rounded transition-colors" title="Kurzíva"><Italic size={16}/></button>
       <div className="w-px h-6 bg-gray-300 mx-1" />
-      <button type="button" onClick={() => onCommand('formatBlock', 'h3')} className="p-1.5 hover:bg-white rounded transition-colors text-gray-700 font-black text-[10px]">H3</button>
-      <button type="button" onClick={() => onCommand('insertUnorderedList')} className="p-1.5 hover:bg-white rounded transition-colors text-gray-700" title="Seznam"><List size={14}/></button>
+      <button type="button" onClick={() => handleEditorCommand('formatBlock', 'H3')} className="px-3 py-1 hover:bg-white rounded font-black text-[10px]">H3</button>
+      <button type="button" onClick={() => handleEditorCommand('insertUnorderedList')} className="p-2 hover:bg-white rounded transition-colors" title="Seznam"><List size={16}/></button>
+    </div>
+  );
+
+  const SectionTitle = ({ title, icon: Icon }: any) => (
+    <div className="flex items-center gap-4 mb-8">
+      <div className="w-10 h-10 bg-[#007BFF]/10 text-[#007BFF] flex items-center justify-center rounded-sm"><Icon size={20}/></div>
+      <h3 className="text-sm font-black uppercase tracking-[0.3em]">{title}</h3>
     </div>
   );
 
   return (
-    <div className="space-y-12 pb-20">
-      <div className="flex bg-white border p-1 max-w-5xl overflow-x-auto no-scrollbar">
+    <div className="space-y-12 pb-32">
+      {/* Visual Navigation Tabs */}
+      <div className="flex bg-white border p-1 sticky top-0 z-[100] shadow-xl overflow-x-auto no-scrollbar">
         {[
-          { id: 'visuals', label: 'Vizuály' },
-          { id: 'content', label: 'Texty & O mně' },
-          { id: 'footer', label: 'Kontakt & Ceník' },
-          { id: 'docs', label: 'Dokumentace' }
+          { id: 'home', label: 'Úvodní stránka', icon: Layout },
+          { id: 'portfolio', label: 'Portfolio', icon: Layers },
+          { id: 'specs', label: 'Specializace', icon: Camera },
+          { id: 'contact', label: 'Kontakt & Bio', icon: User },
+          { id: 'footer', label: 'Ceník & Patička', icon: Wallet },
+          { id: 'legal', label: 'Dokumenty', icon: FileText }
         ].map((tab) => (
-          <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`flex-1 min-w-[140px] py-4 text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === tab.id ? 'bg-[#007BFF] text-white shadow-lg' : 'text-gray-400 hover:text-black'}`}>
-            {tab.label}
+          <button 
+            key={tab.id} 
+            onClick={() => setActiveTab(tab.id as any)} 
+            className={`flex-1 min-w-[150px] py-5 px-4 flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab.id ? 'bg-[#007BFF] text-white shadow-lg' : 'text-gray-400 hover:text-black hover:bg-gray-50'}`}
+          >
+            <tab.icon size={16} /> {tab.label}
           </button>
         ))}
       </div>
 
       <AnimatePresence mode="wait">
-        {activeTab === 'visuals' && (
-          <motion.div key="vis" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white p-10 border shadow-sm space-y-10">
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                <div className="space-y-4">
-                  <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Profilová fotografie</label>
-                  <div className="flex gap-4">
-                    <div className="w-16 h-16 bg-gray-50 border shrink-0 overflow-hidden"><img src={settings.profilePic} className="w-full h-full object-cover" /></div>
-                    <input type="text" value={settings.profilePic} onChange={e=>setSettings({...settings, profilePic:e.target.value})} className={inputClass} placeholder="URL..." />
-                    <button onClick={() => openPicker('profilePic')} className="bg-black text-white px-6 shrink-0 transition-all hover:bg-[#007BFF]"><ImageIcon size={20}/></button>
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Záhlaví kontaktu</label>
-                  <div className="flex gap-4">
-                    <input type="text" value={settings.contactHeader} onChange={e=>setSettings({...settings, contactHeader:e.target.value})} className={inputClass} placeholder="URL pozadí..." />
-                    <button onClick={() => openPicker('contactHeader')} className="bg-black text-white px-6 shrink-0 transition-all hover:bg-[#007BFF]"><ImageIcon size={20}/></button>
-                  </div>
-                </div>
-             </div>
-          </motion.div>
-        )}
-
-        {activeTab === 'content' && (
-          <motion.div key="cont" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white p-10 border shadow-sm space-y-10">
-             <div className="space-y-6">
-                <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Hlavní nadpis "O mně"</label>
-                <input type="text" value={settings.homeAboutTitle} onChange={e=>setSettings({...settings, homeAboutTitle:e.target.value})} className={`${inputClass} text-2xl uppercase`} />
-             </div>
-             <div className="space-y-4">
-                <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Text "O mně" (WYSIWYG Editor)</label>
-                <div className="border-2 border-gray-100 rounded-sm overflow-hidden">
-                  <EditorToolbar onCommand={handleEditorCommand} />
-                  <div ref={homeAboutEditorRef} contentEditable className="min-h-[300px] p-8 outline-none prose prose-lg max-w-none text-black bg-white" />
-                </div>
-             </div>
-             <div className="space-y-4">
-                <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Krátké Bio (pro kontakt)</label>
-                <textarea value={settings.bio} onChange={e=>setSettings({...settings, bio:e.target.value})} className={`${inputClass} h-32 resize-none`} />
-             </div>
-          </motion.div>
-        )}
-
-        {activeTab === 'footer' && (
-          <motion.div key="footer" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white p-10 border shadow-sm space-y-12">
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="space-y-2"><label className="text-[9px] font-black text-gray-400 uppercase">IČO</label><input type="text" value={settings.ico} onChange={e=>setSettings({...settings, ico:e.target.value})} className={inputClass} /></div>
-                <div className="space-y-2"><label className="text-[9px] font-black text-gray-400 uppercase">Email</label><input type="text" value={settings.email} onChange={e=>setSettings({...settings, email:e.target.value})} className={inputClass} /></div>
-                <div className="space-y-2"><label className="text-[9px] font-black text-gray-400 uppercase">Telefon</label><input type="text" value={settings.phone} onChange={e=>setSettings({...settings, phone:e.target.value})} className={inputClass} /></div>
-                <div className="space-y-2"><label className="text-[9px] font-black text-gray-400 uppercase">Adresa</label><input type="text" value={settings.address} onChange={e=>setSettings({...settings, address:e.target.value})} className={inputClass} /></div>
-             </div>
-
-             <div className="pt-10 border-t space-y-10">
-                <h3 className="text-sm font-black uppercase flex items-center gap-4 text-[#007BFF]"><Wallet size={18}/> Nastavení Ceníku</h3>
+        <motion.div 
+          key={activeTab} 
+          initial={{ opacity: 0, y: 20 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          exit={{ opacity: 0, y: -20 }}
+          className="bg-white p-10 lg:p-16 border shadow-sm space-y-20 max-w-6xl mx-auto"
+        >
+          {activeTab === 'home' && (
+            <div className="space-y-20">
+              <section>
+                <SectionTitle title="Hero Sekce (Záhlaví)" icon={Monitor} />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                   <div className="space-y-6 p-6 bg-gray-50 border">
-                      <input type="text" placeholder="Název 1" value={settings.price1Title} onChange={e=>setSettings({...settings, price1Title:e.target.value})} className={inputClass} />
-                      <input type="text" placeholder="Cena 1" value={settings.price1Value} onChange={e=>setSettings({...settings, price1Value:e.target.value})} className={inputClass} />
-                      <div className="bg-white border">
-                        <EditorToolbar onCommand={handleEditorCommand} />
-                        <div ref={price1EditorRef} contentEditable className="min-h-[150px] p-4 text-sm outline-none bg-white" />
-                      </div>
+                   <div className="space-y-4">
+                      <label className="text-[10px] font-black uppercase text-gray-400">Hlavní nadpis</label>
+                      <input type="text" value={settings.homeHeroTitle} onChange={e=>setSettings({...settings, homeHeroTitle:e.target.value})} className={`${inputClass} text-2xl`} />
                    </div>
-                   <div className="space-y-6 p-6 bg-gray-50 border">
-                      <input type="text" placeholder="Název 2" value={settings.price2Title} onChange={e=>setSettings({...settings, price2Title:e.target.value})} className={inputClass} />
-                      <input type="text" placeholder="Cena 2" value={settings.price2Value} onChange={e=>setSettings({...settings, price2Value:e.target.value})} className={inputClass} />
-                      <div className="bg-white border">
-                        <EditorToolbar onCommand={handleEditorCommand} />
-                        <div ref={price2EditorRef} contentEditable className="min-h-[150px] p-4 text-sm outline-none bg-white" />
+                   <div className="space-y-4">
+                      <label className="text-[10px] font-black uppercase text-gray-400">Podnadpis / Profese</label>
+                      <input type="text" value={settings.homeHeroSubtitle} onChange={e=>setSettings({...settings, homeHeroSubtitle:e.target.value})} className={inputClass} />
+                   </div>
+                   <div className="md:col-span-2 space-y-4">
+                      <label className="text-[10px] font-black uppercase text-gray-400">Pozadí úvodní sekce (Obrázek)</label>
+                      <div className="flex gap-4">
+                        <div className="w-24 h-16 bg-gray-100 border overflow-hidden shrink-0"><img src={settings.homeHeader} className="w-full h-full object-cover grayscale" /></div>
+                        <input type="text" value={settings.homeHeader} onChange={e=>setSettings({...settings, homeHeader:e.target.value})} className={inputClass} placeholder="URL obrázku..." />
+                        <button onClick={() => openPicker('homeHeader')} className="bg-black text-white px-8 shrink-0 hover:bg-[#007BFF] transition-all"><ImageIcon size={20}/></button>
                       </div>
                    </div>
                 </div>
-             </div>
-          </motion.div>
-        )}
+              </section>
 
-        {activeTab === 'docs' && (
-          <motion.div key="docs" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white p-10 border shadow-sm space-y-10">
-             <div className="space-y-6">
-                <h3 className="text-sm font-black uppercase tracking-widest text-[#007BFF]">Ochrana soukromí (GDPR)</h3>
-                <div className="border-2 border-gray-100 rounded-sm">
-                  <EditorToolbar onCommand={handleEditorCommand} />
-                  <div ref={privacyEditorRef} contentEditable className="min-h-[300px] p-8 outline-none prose prose-sm max-w-none text-black bg-white" />
+              <section className="pt-20 border-t">
+                <SectionTitle title="Sekce O mně" icon={User} />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+                   <div className="space-y-4">
+                      <label className="text-[10px] font-black uppercase text-gray-400">Portrétní foto</label>
+                      <div className="aspect-[3/4] bg-gray-50 border overflow-hidden relative group">
+                        <img src={settings.profilePic} className="w-full h-full object-cover grayscale" />
+                        <button onClick={() => openPicker('profilePic')} className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-all"><Plus size={32}/></button>
+                      </div>
+                   </div>
+                   <div className="md:col-span-2 space-y-8">
+                      <div className="space-y-4">
+                        <label className="text-[10px] font-black uppercase text-gray-400">Nadpis bloku</label>
+                        <input type="text" value={settings.homeAboutTitle} onChange={e=>setSettings({...settings, homeAboutTitle:e.target.value})} className={`${inputClass} text-xl`} />
+                      </div>
+                      <div className="space-y-4">
+                        <label className="text-[10px] font-black uppercase text-gray-400">Textový obsah (WYSIWYG)</label>
+                        <div className="border-2 border-gray-100 rounded-sm overflow-hidden">
+                           <Toolbar />
+                           <div ref={refs.homeAbout} contentEditable className="min-h-[350px] p-10 outline-none prose prose-lg max-w-none text-black bg-white font-medium leading-relaxed" />
+                        </div>
+                      </div>
+                   </div>
                 </div>
-             </div>
-             <div className="space-y-6 pt-10 border-t">
-                <h3 className="text-sm font-black uppercase tracking-widest text-black">Obchodní podmínky</h3>
-                <div className="border-2 border-gray-100 rounded-sm">
-                  <EditorToolbar onCommand={handleEditorCommand} />
-                  <div ref={termsEditorRef} contentEditable className="min-h-[300px] p-8 outline-none prose prose-sm max-w-none text-black bg-white" />
+              </section>
+            </div>
+          )}
+
+          {activeTab === 'portfolio' && (
+            <div className="space-y-16">
+              <section>
+                <SectionTitle title="Záhlaví Portfolia" icon={Layers} />
+                <div className="space-y-6">
+                  <div className="aspect-[21/9] bg-gray-50 border relative overflow-hidden group">
+                    <img src={settings.portfolioHeader} className="w-full h-full object-cover grayscale" />
+                    <button onClick={() => openPicker('portfolioHeader')} className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white font-black text-[10px] tracking-widest uppercase transition-all">Změnit obrázek záhlaví</button>
+                  </div>
+                  <div className="flex gap-4">
+                    <input type="text" value={settings.portfolioHeader} onChange={e=>setSettings({...settings, portfolioHeader:e.target.value})} className={inputClass} placeholder="URL..." />
+                  </div>
                 </div>
-             </div>
-          </motion.div>
-        )}
+              </section>
+            </div>
+          )}
+
+          {activeTab === 'specs' && (
+            <div className="space-y-20">
+              <section>
+                <SectionTitle title="Záhlaví Specializací" icon={Camera} />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                   <div className="space-y-4">
+                      <label className="text-[10px] font-black uppercase text-gray-400">Nadpis</label>
+                      <input type="text" value={settings.specificationsTitle} onChange={e=>setSettings({...settings, specificationsTitle:e.target.value})} className={inputClass} />
+                   </div>
+                   <div className="space-y-4">
+                      <label className="text-[10px] font-black uppercase text-gray-400">Podnadpis</label>
+                      <input type="text" value={settings.specificationsSubtitle} onChange={e=>setSettings({...settings, specificationsSubtitle:e.target.value})} className={inputClass} />
+                   </div>
+                </div>
+              </section>
+
+              <section className="pt-20 border-t">
+                <SectionTitle title="Vlastní obrázky pro jednotlivé kategorie" icon={Plus} />
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                   {SPECIALIZATIONS.map(spec => (
+                     <div key={spec.id} className="space-y-3">
+                        <div className="aspect-square bg-gray-50 border relative group overflow-hidden rounded-sm">
+                           <img src={settings.specializationHeaders[spec.id] || spec.image} className="w-full h-full object-cover grayscale" />
+                           <button onClick={() => openPicker(spec.id, true)} className="absolute inset-0 bg-[#007BFF]/80 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-all"><ImageIcon size={20}/></button>
+                        </div>
+                        <p className="text-[8px] font-black uppercase text-center text-gray-400 truncate">{spec.name}</p>
+                     </div>
+                   ))}
+                </div>
+              </section>
+            </div>
+          )}
+
+          {activeTab === 'contact' && (
+            <div className="space-y-20">
+              <section>
+                <SectionTitle title="Kontaktní informace" icon={Mail} />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  <div className="space-y-2"><label className="text-[9px] font-black text-gray-400">Email</label><input type="text" value={settings.email} onChange={e=>setSettings({...settings, email:e.target.value})} className={inputClass} /></div>
+                  <div className="space-y-2"><label className="text-[9px] font-black text-gray-400">Telefon</label><input type="text" value={settings.phone} onChange={e=>setSettings({...settings, phone:e.target.value})} className={inputClass} /></div>
+                  <div className="space-y-2"><label className="text-[9px] font-black text-gray-400">Adresa / Město</label><input type="text" value={settings.address} onChange={e=>setSettings({...settings, address:e.target.value})} className={inputClass} /></div>
+                  <div className="space-y-2"><label className="text-[9px] font-black text-gray-400">IČO</label><input type="text" value={settings.ico} onChange={e=>setSettings({...settings, ico:e.target.value})} className={inputClass} /></div>
+                  <div className="space-y-2"><label className="text-[9px] font-black text-gray-400">DIČ</label><input type="text" value={settings.dic} onChange={e=>setSettings({...settings, dic:e.target.value})} className={inputClass} /></div>
+                </div>
+              </section>
+
+              <section className="pt-20 border-t">
+                <SectionTitle title="Krátké BIO (Text pod portrétem)" icon={AlignLeft} />
+                <textarea value={settings.bio} onChange={e=>setSettings({...settings, bio:e.target.value})} className={`${inputClass} h-40 resize-none normal-case font-medium text-sm leading-relaxed`} />
+              </section>
+
+              <section className="pt-20 border-t">
+                 <SectionTitle title="Sociální sítě" icon={Globe} />
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="flex gap-4 items-center bg-gray-50 p-4 border"><Instagram className="text-[#E1306C]"/><input type="text" value={settings.instagramUrl} onChange={e=>setSettings({...settings, instagramUrl:e.target.value})} className="bg-transparent text-xs font-bold flex-grow outline-none" placeholder="Instagram URL" /></div>
+                    <div className="flex gap-4 items-center bg-gray-50 p-4 border"><Facebook className="text-[#1877F2]"/><input type="text" value={settings.facebookUrl} onChange={e=>setSettings({...settings, facebookUrl:e.target.value})} className="bg-transparent text-xs font-bold flex-grow outline-none" placeholder="Facebook URL" /></div>
+                    <div className="flex gap-4 items-center bg-gray-50 p-4 border"><Youtube className="text-[#FF0000]"/><input type="text" value={settings.youtubeUrl} onChange={e=>setSettings({...settings, youtubeUrl:e.target.value})} className="bg-transparent text-xs font-bold flex-grow outline-none" placeholder="Youtube URL" /></div>
+                    <div className="flex gap-4 items-center bg-gray-50 p-4 border"><Linkedin className="text-[#0077B5]"/><input type="text" value={settings.linkedinUrl} onChange={e=>setSettings({...settings, linkedinUrl:e.target.value})} className="bg-transparent text-xs font-bold flex-grow outline-none" placeholder="Linkedin URL" /></div>
+                 </div>
+              </section>
+            </div>
+          )}
+
+          {activeTab === 'footer' && (
+            <div className="space-y-20">
+              <section>
+                <SectionTitle title="Ceník v úvodu webu" icon={Wallet} />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                   <div className="space-y-6 bg-gray-50 p-8 border">
+                      <input type="text" value={settings.price1Title} onChange={e=>setSettings({...settings, price1Title:e.target.value})} className={inputClass} placeholder="Název balíčku 1" />
+                      <input type="text" value={settings.price1Value} onChange={e=>setSettings({...settings, price1Value:e.target.value})} className={inputClass} placeholder="Cena balíčku 1" />
+                      <div className="bg-white border-2 border-gray-100 overflow-hidden">
+                        <Toolbar />
+                        <div ref={refs.price1} contentEditable className="min-h-[150px] p-6 outline-none text-xs font-bold uppercase tracking-widest text-gray-500" />
+                      </div>
+                   </div>
+                   <div className="space-y-6 bg-gray-50 p-8 border">
+                      <input type="text" value={settings.price2Title} onChange={e=>setSettings({...settings, price2Title:e.target.value})} className={inputClass} placeholder="Název balíčku 2" />
+                      <input type="text" value={settings.price2Value} onChange={e=>setSettings({...settings, price2Value:e.target.value})} className={inputClass} placeholder="Cena balíčku 2" />
+                      <div className="bg-white border-2 border-gray-100 overflow-hidden">
+                        <Toolbar />
+                        <div ref={refs.price2} contentEditable className="min-h-[150px] p-6 outline-none text-xs font-bold uppercase tracking-widest text-gray-500" />
+                      </div>
+                   </div>
+                </div>
+              </section>
+
+              <section className="pt-20 border-t">
+                <SectionTitle title="Patička (Footer)" icon={AlignLeft} />
+                <div className="space-y-4">
+                   <label className="text-[10px] font-black uppercase text-gray-400">Popis v patičce (Pod logem)</label>
+                   <div className="border-2 border-gray-100 overflow-hidden">
+                      <Toolbar />
+                      <div ref={refs.footerDesc} contentEditable className="min-h-[120px] p-6 outline-none text-sm font-medium leading-relaxed" />
+                   </div>
+                </div>
+              </section>
+            </div>
+          )}
+
+          {activeTab === 'legal' && (
+            <div className="space-y-20">
+               <section>
+                 <SectionTitle title="Ochrana soukromí (GDPR)" icon={Shield} />
+                 <div className="border-2 border-gray-100 overflow-hidden">
+                    <Toolbar />
+                    <div ref={refs.privacy} contentEditable className="min-h-[400px] p-12 outline-none prose prose-sm max-w-none bg-white text-black font-medium leading-relaxed" />
+                 </div>
+               </section>
+               <section className="pt-20 border-t">
+                 <SectionTitle title="Obchodní podmínky" icon={FileText} />
+                 <div className="border-2 border-gray-100 overflow-hidden">
+                    <Toolbar />
+                    <div ref={refs.terms} contentEditable className="min-h-[400px] p-12 outline-none prose prose-sm max-w-none bg-white text-black font-medium leading-relaxed" />
+                 </div>
+               </section>
+            </div>
+          )}
+        </motion.div>
       </AnimatePresence>
 
-      <div className="flex justify-end pt-10 border-t">
-        <button onClick={saveSettings} className="bg-[#007BFF] text-white px-20 py-6 text-[11px] font-black uppercase tracking-[0.5em] shadow-2xl hover:bg-black transition-all">
-          <RefreshCw size={16} className="inline mr-4" /> ULOŽIT ZMĚNY
+      <div className="fixed bottom-10 right-10 z-[200] flex flex-col items-end gap-4">
+        <button onClick={saveSettings} disabled={isSaving} className="bg-[#007BFF] text-white px-16 py-6 text-[11px] font-black uppercase tracking-[0.5em] shadow-[0_20px_50px_rgba(0,123,255,0.4)] hover:bg-black transition-all transform hover:-translate-y-1 active:scale-95 flex items-center gap-4">
+          {isSaving ? <RefreshCw className="animate-spin" size={18}/> : <Save size={18}/>}
+          PUBLIKOVAT VŠE
         </button>
       </div>
 
       {/* Media Picker Modal */}
       <AnimatePresence>
         {showPicker && (
-          <div className="fixed inset-0 z-[2000] bg-black/95 flex items-center justify-center p-12" onClick={()=>setShowPicker(false)}>
+          <div className="fixed inset-0 z-[3000] bg-black/95 flex items-center justify-center p-12" onClick={()=>setShowPicker(false)}>
             <div className="bg-white w-full max-w-6xl h-[85vh] flex flex-col rounded-sm overflow-hidden" onClick={e=>e.stopPropagation()}>
                <div className="p-8 border-b flex justify-between items-center bg-gray-50 text-black">
-                  <h3 className="text-xl font-black uppercase">Vybrat médium</h3>
-                  <button onClick={()=>setShowPicker(false)} className="text-black hover:text-red-500"><X size={32}/></button>
+                  <div className="space-y-1">
+                    <h3 className="text-xl font-black uppercase tracking-widest">Knihovna médií</h3>
+                    <p className="text-[9px] font-black text-[#007BFF] uppercase tracking-[0.3em]">Vyberte obrázek pro: {pickerTarget?.key}</p>
+                  </div>
+                  <button onClick={()=>setShowPicker(false)} className="text-black hover:text-red-500 transition-colors"><X size={32}/></button>
                </div>
-               <div className="p-10 grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-6 overflow-y-auto bg-gray-50/20">
+               <div className="p-10 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-6 overflow-y-auto bg-gray-50/30 flex-grow">
                   {allItems.filter(i => i.type !== 'folder').map(item => (
-                    <div key={item.id} onClick={() => selectFromPicker(item.url!)} className="relative aspect-square border-2 border-transparent hover:border-[#007BFF] p-1 cursor-pointer bg-white group">
+                    <div key={item.id} onClick={() => selectFromPicker(item.url!)} className="relative aspect-square border-2 border-transparent hover:border-[#007BFF] transition-all p-1 cursor-pointer bg-white group shadow-sm">
                        <img src={item.url} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all"/>
+                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                         <CheckCircle2 className="text-[#007BFF]" size={32}/>
+                       </div>
                     </div>
                   ))}
+               </div>
+               <div className="p-6 border-t bg-gray-50 flex justify-center">
+                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Kliknutím na obrázek jej okamžitě vyberete</p>
                </div>
             </div>
           </div>
