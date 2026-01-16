@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit2, Save, X, Search, Briefcase } from 'lucide-react';
+import { Plus, Trash2, Edit2, Save, X, Search, Briefcase, CheckSquare, Square } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface Partner {
@@ -12,93 +12,61 @@ const PartnerManager: React.FC = () => {
   const [partners, setPartners] = useState<Partner[]>([]);
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
+  const loadData = () => {
     const saved = localStorage.getItem('jakub_minka_partners');
-    if (saved) {
-      setPartners(JSON.parse(saved));
-    } else {
-      const initial = ["Skoda Auto", "Red Bull", "National Geographic", "STRABAG", "Metrostav", "Czech Tourism", "Volvo", "Siemens", "Apple", "Google"].map(n => ({ id: Math.random().toString(36).substr(2, 9), name: n }));
-      setPartners(initial);
-      localStorage.setItem('jakub_minka_partners', JSON.stringify(initial));
-    }
-  }, []);
+    if (saved) setPartners(JSON.parse(saved).sort((a:any, b:any) => a.name.localeCompare(b.name)));
+  };
+
+  useEffect(() => { loadData(); }, []);
 
   const saveToStorage = (updated: Partner[]) => {
-    setPartners(updated);
     localStorage.setItem('jakub_minka_partners', JSON.stringify(updated));
+    setPartners(updated.sort((a,b) => a.name.localeCompare(b.name)));
     window.dispatchEvent(new Event('storage'));
   };
 
-  const handleAdd = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newName.trim()) return;
-    const partner = { id: Math.random().toString(36).substr(2, 9), name: newName.trim() };
-    saveToStorage([partner, ...partners]);
-    setNewName('');
+  const toggleSelect = (id: string) => {
+    const next = new Set(selectedIds);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setSelectedIds(next);
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm('Opravdu chcete tohoto partnera odstranit?')) {
-      saveToStorage(partners.filter(p => p.id !== id));
-    }
+  const deleteBulk = () => {
+    if (!confirm('Smazat vybrané partnery?')) return;
+    const next = partners.filter(p => !selectedIds.has(p.id));
+    saveToStorage(next);
+    setSelectedIds(new Set());
   };
-
-  const handleUpdate = (id: string, name: string) => {
-    saveToStorage(partners.map(p => p.id === id ? { ...p, name } : p));
-    setIsEditing(null);
-  };
-
-  const filtered = partners.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   return (
     <div className="space-y-8">
-      <div className="bg-white p-6 rounded-sm border border-gray-100 shadow-sm flex flex-wrap items-center justify-between gap-6">
-        <form onSubmit={handleAdd} className="flex items-center gap-4 flex-grow max-w-xl">
-           <input 
-             type="text" 
-             value={newName} 
-             onChange={e => setNewName(e.target.value)} 
-             placeholder="Název firmy / partnera..." 
-             className="flex-grow bg-gray-50 border border-gray-100 py-3.5 px-6 text-sm focus:outline-none focus:border-[#007BFF] text-black" 
-           />
-           <button type="submit" className="bg-[#007BFF] text-white px-8 py-3.5 text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-black transition-all">
-             <Plus size={16} /> Přidat partnera
-           </button>
+      <div className="bg-white p-6 border flex flex-wrap items-center justify-between gap-6">
+        <form onSubmit={(e)=>{e.preventDefault(); if(newName){saveToStorage([{id:Math.random().toString(), name:newName}, ...partners]); setNewName('');}}} className="flex-grow max-w-xl flex gap-4">
+           <input type="text" value={newName} onChange={e=>setNewName(e.target.value)} placeholder="Název partnera..." className="flex-grow border-2 border-gray-100 p-4 text-sm font-bold" />
+           <button type="submit" className="bg-[#007BFF] text-white px-8 py-4 text-[10px] font-black uppercase tracking-widest"><Plus size={16} className="inline mr-2"/> Přidat</button>
         </form>
-        <div className="relative">
-          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input type="text" placeholder="Hledat..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="bg-gray-50 border border-gray-100 py-3.5 pl-12 pr-6 text-xs font-medium focus:outline-none focus:border-[#007BFF] text-black" />
-        </div>
+        {selectedIds.size > 0 && (
+          <button onClick={deleteBulk} className="bg-red-600 text-white px-8 py-4 text-[10px] font-black uppercase tracking-widest"><Trash2 size={16} className="inline mr-2"/> Smazat vybrané ({selectedIds.size})</button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {filtered.map(partner => (
-          <div key={partner.id} className="bg-white p-6 border border-gray-100 rounded-sm flex items-center justify-between group hover:border-gray-200 transition-all">
-            {isEditing === partner.id ? (
-              <div className="flex items-center gap-2 w-full bg-white">
-                <input 
-                  type="text" 
-                  defaultValue={partner.name} 
-                  autoFocus
-                  onBlur={(e) => handleUpdate(partner.id, e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleUpdate(partner.id, (e.target as any).value)}
-                  className="flex-grow border-2 border-[#007BFF] py-2 px-3 text-sm font-bold focus:outline-none bg-white text-black" 
-                />
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center gap-3">
-                   <Briefcase size={16} className="text-[#007BFF]" />
-                   <span className="text-sm font-bold uppercase tracking-widest text-black">{partner.name}</span>
-                </div>
-                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => setIsEditing(partner.id)} className="p-2 text-gray-300 hover:text-[#007BFF]"><Edit2 size={16} /></button>
-                  <button onClick={() => handleDelete(partner.id)} className="p-2 text-gray-300 hover:text-red-500"><Trash2 size={16} /></button>
-                </div>
-              </>
-            )}
+        {partners.map(p => (
+          <div key={p.id} className="bg-white p-6 border border-gray-100 flex items-center justify-between group hover:border-[#007BFF] transition-all relative">
+            <div className="flex items-center gap-4">
+               <button onClick={()=>toggleSelect(p.id)}>{selectedIds.has(p.id) ? <CheckSquare className="text-[#007BFF]" size={18}/> : <Square className="text-gray-200" size={18}/>}</button>
+               {isEditing === p.id ? (
+                 <input type="text" defaultValue={p.name} autoFocus onBlur={(e)=>{saveToStorage(partners.map(x=>x.id===p.id?{...x, name:e.target.value}:x)); setIsEditing(null);}} className="font-bold border-b-2 border-[#007BFF] outline-none text-sm w-32 uppercase" />
+               ) : (
+                 <span className="text-sm font-black uppercase tracking-tight text-black">{p.name}</span>
+               )}
+            </div>
+            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+               <button onClick={()=>setIsEditing(p.id)} className="p-2 text-gray-300 hover:text-[#007BFF]"><Edit2 size={16}/></button>
+               <button onClick={()=>{if(confirm('Smazat?')) saveToStorage(partners.filter(x=>x.id!==p.id))}} className="p-2 text-gray-300 hover:text-red-500"><Trash2 size={16}/></button>
+            </div>
           </div>
         ))}
       </div>

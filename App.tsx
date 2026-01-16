@@ -13,6 +13,7 @@ import Contact from './pages/Contact';
 import AdminDashboard from './pages/AdminDashboard';
 import NotFound from './pages/NotFound';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
 import CookieBar from './components/CookieBar';
 
 const ScrollToTop = () => {
@@ -73,6 +74,7 @@ const AppContent = () => {
           <Route path="/projekt/:id" element={<ProjectDetail />} />
           <Route path="/kontakt" element={<Contact />} />
           <Route path="/ochrana-soukromi" element={<PrivacyPolicy />} />
+          <Route path="/podminky-spoluprace" element={<TermsOfService />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

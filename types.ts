@@ -87,6 +87,9 @@ export interface WebSettings {
   doc2Name: string;
   doc2Url: string;
   backstage: string[];
+  // Policy Content
+  privacyContent?: string;
+  termsContent?: string;
   // Social links
   instagramUrl: string;
   facebookUrl: string;

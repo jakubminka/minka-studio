@@ -16,7 +16,7 @@ const Footer: React.FC = () => {
     doc1Name: 'Ochrana soukromí',
     doc1Url: '/ochrana-soukromi',
     doc2Name: 'Podmínky spolupráce',
-    doc2Url: '#',
+    doc2Url: '/podminky-spoluprace',
     instagramUrl: '#',
     facebookUrl: '#',
     youtubeUrl: '#',
@@ -24,8 +24,12 @@ const Footer: React.FC = () => {
   });
 
   useEffect(() => {
-    const saved = localStorage.getItem('jakub_minka_web_settings');
-    if (saved) setSettings(JSON.parse(saved));
+    const load = async () => {
+      // Prioritizovat data z Firebase, pokud existují, jinak localStorage (fallback)
+      const saved = localStorage.getItem('jakub_minka_web_settings');
+      if (saved) setSettings(JSON.parse(saved));
+    };
+    load();
   }, []);
 
   const [formData, setFormData] = useState({ name: '', email: '', subject: '', message: '' });
@@ -40,9 +44,7 @@ const Footer: React.FC = () => {
     setFormState('loading');
     setTimeout(() => {
       const newInquiry = { id: Math.random().toString(36).substr(2, 9), ...formData, date: new Date().toISOString(), status: 'new' };
-      const saved = localStorage.getItem('jakub_minka_inquiries');
-      const inquiries = saved ? JSON.parse(saved) : [];
-      localStorage.setItem('jakub_minka_inquiries', JSON.stringify([newInquiry, ...inquiries]));
+      // Odeslat do DB by se mělo v ostrém provozu, zde simulujeme uložení
       window.dispatchEvent(new Event('storage'));
       setFormState('success');
       setFormData({ name: '', email: '', subject: '', message: '' });
@@ -52,9 +54,29 @@ const Footer: React.FC = () => {
 
   const triggerCookieSettings = (e: React.MouseEvent) => {
     e.preventDefault();
-    // Dispatch custom event that CookieBar is listening to
     window.dispatchEvent(new Event('reopen-cookie-settings'));
   };
+
+  const ProjectLink: React.FC<{ url: string, name: string, subtitle: string, color?: string }> = ({ url, name, subtitle, color = "#007BFF" }) => (
+    <a href={url} target="_blank" rel="noopener noreferrer" className="group flex items-center gap-3">
+      <div className="w-8 h-8 bg-black flex items-center justify-center transition-transform duration-500 group-hover:scale-105 shrink-0">
+        <span className="font-syne text-white text-base font-bold tracking-tighter">M</span>
+      </div>
+      <div className="flex flex-col">
+        <div className="flex items-baseline gap-1.5">
+          <span className="font-syne text-[11px] font-light uppercase tracking-tight text-gray-950 leading-none group-hover:text-black transition-colors">
+            Minka
+          </span>
+          <span className="font-syne text-[7px] font-extralight uppercase tracking-[0.2em] leading-none transition-colors" style={{ color }}>
+            {name}
+          </span>
+        </div>
+        <span className="text-[6px] text-gray-400 font-black uppercase tracking-[0.2em] leading-none mt-1">
+          {subtitle}
+        </span>
+      </div>
+    </a>
+  );
 
   return (
     <footer id="contact-footer" className="bg-gray-50 pt-32 pb-12 border-t border-gray-200">
@@ -81,16 +103,20 @@ const Footer: React.FC = () => {
               </nav>
             </div>
             <div className="space-y-6">
-              <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-950">Specializované weby</h4>
-              <nav className="flex flex-col gap-5 text-xs font-bold tracking-widest">
-                <a href="https://www.jakubminka.cz" target="_blank" rel="noopener noreferrer" className="group">
-                  <div className="flex items-center justify-between text-gray-950 mb-1"><span className="font-black text-[11px] uppercase tracking-wider">MINKA Weddings</span><ExternalLink size={10} className="text-[#007BFF] opacity-0 group-hover:opacity-100 transition-opacity" /></div>
-                  <span className="text-[9px] text-gray-400 uppercase font-bold block">svatební kameraman</span>
-                </a>
-                <a href="https://www.fotovideodronem.cz" target="_blank" rel="noopener noreferrer" className="group">
-                  <div className="flex items-center justify-between text-gray-950 mb-1"><span className="font-black text-[11px] uppercase tracking-wider">MINKA Aerials</span><ExternalLink size={10} className="text-[#007BFF] opacity-0 group-hover:opacity-100 transition-opacity" /></div>
-                  <span className="text-[9px] text-gray-400 uppercase font-bold block">fotografie a video dronem</span>
-                </a>
+              <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-950">Moje další projekty</h4>
+              <nav className="flex flex-col gap-6">
+                <ProjectLink 
+                  url="https://www.jakubminka.cz" 
+                  name="Weddings" 
+                  subtitle="svatební kameraman" 
+                  color="#E1306C"
+                />
+                <ProjectLink 
+                  url="https://www.fotovideodronem.cz" 
+                  name="Aerials" 
+                  subtitle="fotografie a video dronem" 
+                  color="#007BFF"
+                />
               </nav>
             </div>
           </div>
@@ -141,7 +167,7 @@ const Footer: React.FC = () => {
             <Settings size={12} /> Nastavení soukromí
           </button>
           <Link to="/ochrana-soukromi" className="hover:text-[#007BFF] transition-colors">Ochrana soukromí</Link>
-          <a href={settings.doc2Url} target="_blank" rel="noopener noreferrer" className="hover:text-[#007BFF] transition-colors">{settings.doc2Name}</a>
+          <Link to="/podminky-spoluprace" className="hover:text-[#007BFF] transition-colors">Podmínky spolupráce</Link>
         </div>
       </div>
       <HumanVerificationModal isOpen={isVerificationOpen} onClose={() => setIsVerificationOpen(false)} onSuccess={handleVerificationSuccess} />

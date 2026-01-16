@@ -1,17 +1,17 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Shield, FileText, Lock, Eye, ArrowLeft } from 'lucide-react';
+import { FileText, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { WebSettings } from '../types';
 import { dataStore } from '../lib/db';
 
-const PrivacyPolicy: React.FC = () => {
+const TermsOfService: React.FC = () => {
   const [settings, setSettings] = useState<Partial<WebSettings>>({});
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    document.title = "Ochrana osobních údajů | Jakub Minka";
+    document.title = "Podmínky spolupráce | Jakub Minka";
     const load = async () => {
       const saved = await dataStore.doc('web_settings').get();
       if (saved) setSettings(saved);
@@ -27,25 +27,23 @@ const PrivacyPolicy: React.FC = () => {
             <ArrowLeft size={14} /> Zpět na hlavní stranu
           </Link>
           <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-[#007BFF] mx-auto shadow-sm border border-blue-100">
-            <Shield size={32} />
+            <FileText size={32} />
           </div>
           <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tighter text-black">
-            OCHRANA OSOBNÍCH <br /><span className="text-[#007BFF]">ÚDAJŮ</span>
+            PODMÍNKY <br /><span className="text-[#007BFF]">SPOLUPRÁCE</span>
           </h1>
-          <p className="text-gray-400 font-bold uppercase tracking-[0.3em] text-[10px]">Právní dokumentace</p>
+          <p className="text-gray-400 font-bold uppercase tracking-[0.3em] text-[10px]">Obchodní dokumentace</p>
         </div>
       </header>
 
       <main className="max-w-3xl mx-auto px-6 py-20">
-        {settings.privacyContent ? (
+        {settings.termsContent ? (
           <div className="prose prose-lg max-w-none text-gray-700 font-medium leading-relaxed whitespace-pre-wrap">
-            {settings.privacyContent}
+            {settings.termsContent}
           </div>
         ) : (
-          <div className="space-y-12 animate-pulse">
-            <div className="h-4 bg-gray-100 w-3/4"></div>
-            <div className="h-4 bg-gray-100 w-full"></div>
-            <div className="h-4 bg-gray-100 w-5/6"></div>
+          <div className="py-20 text-center text-gray-400 font-bold uppercase tracking-widest text-xs">
+            Dokument se připravuje...
           </div>
         )}
       </main>
@@ -53,4 +51,4 @@ const PrivacyPolicy: React.FC = () => {
   );
 };
 
-export default PrivacyPolicy;
+export default TermsOfService;
