@@ -64,10 +64,13 @@ const Home: React.FC = () => {
       if (savedPartners) setPartners(savedPartners);
 
       const savedReviews = await dataStore.collection('reviews').getAll();
-      const cachedReviews = JSON.parse(localStorage.getItem('jakub_minka_cache_reviews') || '[]');
-      if (savedReviews.length > 0) setReviews(savedReviews.map(mapReviewFromDb));
-      else if (cachedReviews.length > 0) setReviews(cachedReviews.map(mapReviewFromDb));
-      else setReviews(DEFAULT_REVIEWS);
+      if (savedReviews && savedReviews.length > 0) {
+        // Map from DB format (content/company) to UI format (text/platform)
+        setReviews(savedReviews.map(mapReviewFromDb));
+      } else {
+        // Use default reviews as fallback
+        setReviews(DEFAULT_REVIEWS);
+      }
       
       setIsDataLoaded(true);
     };

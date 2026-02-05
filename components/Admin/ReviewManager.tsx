@@ -56,42 +56,33 @@ const ReviewManager: React.FC = () => {
   };
 
   const loadData = async () => {
-    const initKey = 'jakub_minka_reviews_initialized';
-    const cacheKey = 'jakub_minka_cache_reviews';
-    // Try to migrate from old localStorage key
-    const oldData = localStorage.getItem('jakub_minka_reviews');
-    if (oldData) {
-      const oldReviews = JSON.parse(oldData);
-      for (const review of oldReviews) {
-        await dataStore.collection('reviews').save(review);
+    try {
+      // Clean up old initialization flag
+      localStorage.removeItem('jakub_minka_reviews_initialized');
+      localStorage.removeItem('jakub_minka_reviews');
+      
+      // Load from dataStore with force refresh
+      const saved = await dataStore.collection('reviews').getAll({ force: true });
+      
+      // Always show what's in the database (even if empty)
+      if (saved && saved.length > 0) {
+        // Map from DB format (content/company) to UI format (text/platform)
+        setReviews(saved.map(mapFromDb));
+      } else {
+        setReviews([]);
       }
-      localStorage.removeItem('jakub_minka_reviews'); // Remove old data
+    } catch (error) {
+      console.error('Error loading reviews:', error);
+      setReviews([]);
     }
+  };
 
-    // Load from dataStore
-    const saved = await dataStore.collection('reviews').getAll({ force: true });
-    const cached = JSON.parse(localStorage.getItem(cacheKey) || '[]');
-    const isInitialized = localStorage.getItem(initKey) === 'true';
-    if (saved && saved.length > 0) {
-      setReviews(saved.map(mapFromDb));
-      if (!isInitialized) localStorage.setItem(initKey, 'true');
-      return;
-    }
-    if (cached && cached.length > 0) {
-      setReviews(cached.map(mapFromDb));
-      if (!isInitialized) localStorage.setItem(initKey, 'true');
-      return;
-    }
-
-    if (!isInitialized) {
-      // Initialize with default reviews only on first run
+  const loadDefaultReviews = async () => {
+    if (confirm('Načíst výchozí recenze? (Přidá 2 ukázkové recenze)')) {
       for (const review of INITIAL_REVIEWS) {
         await dataStore.collection('reviews').save(mapToDb(review));
       }
-      setReviews(INITIAL_REVIEWS);
-      localStorage.setItem(initKey, 'true');
-    } else {
-      setReviews([]);
+      await loadData();
     }
   };
 
@@ -109,18 +100,23 @@ const ReviewManager: React.FC = () => {
 
   const handleAddReview = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newReview: Review = {
-      id: Math.random().toString(36).substr(2, 9),
-      author: formData.author || 'Anonymní klient',
-      text: formData.text || '',
-      rating: formData.rating || 5,
-      platform: formData.platform as any || 'manual',
-      date: formData.date || new Date().toLocaleDateString('cs-CZ', { year: 'numeric', month: 'long' })
-    };
+    try {
+      const newReview: Review = {
+        id: Math.random().toString(36).substr(2, 9),
+        author: formData.author || 'Anonymní klient',
+        text: formData.text || '',
+        rating: formData.rating || 5,
+        platform: formData.platform as any || 'manual',
+        date: formData.date || new Date().toLocaleDateString('cs-CZ', { year: 'numeric', month: 'long' })
+      };
 
-    await saveReview(newReview);
-    setShowForm(false);
-    setFormData({ author: '', text: '', rating: 5, platform: 'google', date: '' });
+      await saveReview(newReview);
+      setShowForm(false);
+      setFormData({ author: '', text: '', rating: 5, platform: 'google', date: '' });
+    } catch (error) {
+      console.error('Error adding review:', error);
+      alert('Chyba při přidání recenze. Zkuste to prosím znovu.');
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -160,6 +156,14 @@ const ReviewManager: React.FC = () => {
           >
             <Plus size={16} /> Přidat recenzi
           </button>
+          {reviews.length === 0 && (
+            <button 
+              onClick={loadDefaultReviews}
+              className="bg-gray-600 text-white px-8 py-3.5 text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-gray-800 transition-all"
+            >
+              <CheckCircle2 size={16} /> Načíst výchozí
+            </button>
+          )}
           <div className="relative">
             <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
             <input 

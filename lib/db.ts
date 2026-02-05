@@ -1,7 +1,7 @@
 
 import { supabase } from '../src/supabaseClient';
 
-const DEFAULT_CACHE_TTL_MS = 60 * 1000; // 1 minute for quick updates
+const DEFAULT_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes - much longer to reduce Supabase reads
 
 let supabaseLimitReached = false;
 
@@ -88,10 +88,12 @@ class DataStore {
         const cached = readCache(cacheKey, ttlMs, options?.force);
         if (cached) return cached;
         try {
+          // Only select necessary columns for API optimization
           const { data, error } = await supabase
             .from(tableName)
             .select('*')
-            .order('created_at', { ascending: false });
+            .order('created_at', { ascending: false })
+            .limit(1000); // Prevent loading unbounded data
           
           if (error) throw error;
           
@@ -286,10 +288,12 @@ export class MediaDB {
     const cached = readCache(this.cacheKey, ttlMs, options?.force);
     if (cached) return cached;
     try {
+      // Limit to 500 items and only select necessary columns
       const { data, error } = await supabase
         .from('media_meta')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('id, name, type, url, parent_id, created_at')
+        .order('created_at', { ascending: false })
+        .limit(500);
       
       if (error) throw error;
       const items = (data || []).map(item => this.toCamelCase(item));
@@ -438,10 +442,12 @@ export class BlogDB {
     const cached = readCache(this.cacheKey, ttlMs, options?.force);
     if (cached) return cached;
     try {
+      // Only fetch necessary columns to reduce egress
       const { data, error } = await supabase
         .from('blog')
-        .select('*')
-        .order('date', { ascending: false });
+        .select('id, title, excerpt, content, image_url, author, date, created_at')
+        .order('date', { ascending: false })
+        .limit(100); // Limit to recent blogs
       
       if (error) throw error;
       const items = (data || []).map(item => this.toCamelCase(item));
@@ -571,10 +577,12 @@ export class ProjectDB {
     const cached = readCache(this.cacheKey, ttlMs, options?.force);
     if (cached) return cached;
     try {
+      // Only fetch necessary columns, limit to reduce egress
       const { data, error } = await supabase
         .from('projects')
-        .select('*')
-        .order('date', { ascending: false });
+        .select('id, title, short_description, category, category_id, type, date, thumbnail_url, gallery, created_at')
+        .order('date', { ascending: false })
+        .limit(100); // Limit to recent projects
       
       if (error) throw error;
       const items = (data || []).map(item => this.toCamelCase(item));
@@ -603,7 +611,7 @@ export class ProjectDB {
           checkSupabaseError(error);
           if (!supabaseLimitReached) throw error;
         }
-        console.log('Project saved successfully');
+        // Project saved successfully
       } catch (e: any) {
         checkSupabaseError(e);
         if (!supabaseLimitReached) {
