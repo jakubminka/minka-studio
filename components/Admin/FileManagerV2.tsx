@@ -55,8 +55,13 @@ const FileManagerV2: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadFiles = async () => {
+    console.log('📂 [LOAD] Loading files from database...');
     const dbItems = await mediaDB.getAll();
-    setItems(dbItems.map(i => ({...i, parentId: i.parentId || null})));
+    console.log('📂 [LOAD] Loaded', dbItems.length, 'items from DB');
+    console.log('📂 [LOAD] Sample items:', dbItems.slice(0, 3).map(i => ({ name: i.name, parentId: i.parentId, type: typeof i.parentId })));
+    const mappedItems = dbItems.map(i => ({...i, parentId: i.parentId || null}));
+    console.log('📂 [LOAD] After || null mapping:', mappedItems.slice(0, 3).map(i => ({ name: i.name, parentId: i.parentId, type: typeof i.parentId })));
+    setItems(mappedItems);
   };
 
   useEffect(() => {
@@ -392,15 +397,18 @@ const FileManagerV2: React.FC = () => {
   };
 
   const currentItems = useMemo(() => {
-    console.log('🔍 Filtering items:', { currentFolderId, itemsCount: items.length, searchQuery });
+    console.log('\n🔍 [FILTER] ============ FILTERING ITEMS ============');
+    console.log('🔍 [FILTER] Current folder:', currentFolderId);
+    console.log('🔍 [FILTER] Total items:', items.length);
+    console.log('🔍 [FILTER] All items parentIds:', items.map(i => ({ name: i.name, parentId: i.parentId, type: i.type })));
+    
     let filtered = items.filter(item => {
       const match = item.parentId === currentFolderId;
-      if (!match && currentFolderId === null) {
-        console.log('❌ Item', item.name, 'has parentId:', item.parentId, 'but currentFolderId is null');
-      }
+      console.log(`🔍 [FILTER] "${item.name}" - parentId: "${item.parentId}" ${typeof item.parentId}, currentFolderId: "${currentFolderId}" ${typeof currentFolderId}, match: ${match}`);
       return match && (searchQuery === '' || item.name.toLowerCase().includes(searchQuery.toLowerCase()));
     });
-    console.log('✅ Filtered to', filtered.length, 'items');
+    console.log('✅ [FILTER] Filtered to', filtered.length, 'items:', filtered.map(i => i.name));
+    console.log('🔍 [FILTER] ========================================\n');
 
     // Sorting
     filtered.sort((a, b) => {
