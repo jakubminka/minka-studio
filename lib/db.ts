@@ -3,9 +3,23 @@ import { supabase } from '../src/supabaseClient';
 
 const DEFAULT_CACHE_TTL_MS = 60 * 1000; // 1 minute for quick updates
 
+let supabaseLimitReached = false;
+
+export const getSupabaseLimitStatus = () => supabaseLimitReached;
+export const resetSupabaseLimitStatus = () => { supabaseLimitReached = false; };
+
 const invalidateCache = (cacheKey: string) => {
   localStorage.removeItem(cacheKey);
   localStorage.removeItem(`${cacheKey}_ts`);
+};
+
+const checkSupabaseError = (error: any) => {
+  if (error && (error.message?.includes('quota') || error.message?.includes('limit') || error.code === 'PGRST301')) {
+    supabaseLimitReached = true;
+    console.warn('⚠️ Supabase limit dosažen - používám pouze localStorage');
+    return true;
+  }
+  return false;
 };
 
 const readCache = (cacheKey: string, ttlMs: number, force?: boolean): any[] | null => {
@@ -93,16 +107,27 @@ class DataStore {
 
       save: async (item: any): Promise<void> => {
         try {
-          invalidateCache(cacheKey);
+          // Optimistic update: update cache immediately
+          const localData = JSON.parse(localStorage.getItem(cacheKey) || '[]');
+          const updatedLocal = [item, ...localData.filter((i: any) => i.id !== item.id)];
+          writeCache(cacheKey, updatedLocal);
 
-          try {
-            const { error } = await supabase
-              .from(tableName)
-              .upsert([{ ...item, updated_at: new Date().toISOString() }], { onConflict: 'id' });
-            
-            if (error) throw error;
-          } catch (e) {
-            console.error(`Save error for ${tableName}:`, e);
+          if (!supabaseLimitReached) {
+            try {
+              const { error } = await supabase
+                .from(tableName)
+                .upsert([{ ...item, updated_at: new Date().toISOString() }], { onConflict: 'id' });
+              
+              if (error) {
+                checkSupabaseError(error);
+                if (!supabaseLimitReached) throw error;
+              }
+            } catch (e: any) {
+              checkSupabaseError(e);
+              if (!supabaseLimitReached) {
+                console.error(`Save error for ${tableName}:`, e);
+              }
+            }
           }
         } catch (e) {
           console.error("Save error:", e);
@@ -112,17 +137,28 @@ class DataStore {
 
       delete: async (id: string): Promise<void> => {
         try {
-          invalidateCache(cacheKey);
+          // Optimistic update: remove from cache immediately
+          const localData = JSON.parse(localStorage.getItem(cacheKey) || '[]');
+          const updatedLocal = localData.filter((i: any) => i.id !== id);
+          writeCache(cacheKey, updatedLocal);
 
-          try {
-            const { error } = await supabase
-              .from(tableName)
-              .delete()
-              .eq('id', id);
-            
-            if (error) throw error;
-          } catch (e) {
-            console.error(`Delete error for ${tableName}:`, e);
+          if (!supabaseLimitReached) {
+            try {
+              const { error } = await supabase
+                .from(tableName)
+                .delete()
+                .eq('id', id);
+              
+              if (error) {
+                checkSupabaseError(error);
+                if (!supabaseLimitReached) throw error;
+              }
+            } catch (e: any) {
+              checkSupabaseError(e);
+              if (!supabaseLimitReached) {
+                console.error(`Delete error for ${tableName}:`, e);
+              }
+            }
           }
         } catch (e) {
           console.error("Delete error:", e);
@@ -132,17 +168,28 @@ class DataStore {
 
       update: async (id: string, data: any): Promise<void> => {
         try {
-          invalidateCache(cacheKey);
+          // Optimistic update: update cache immediately
+          const localData = JSON.parse(localStorage.getItem(cacheKey) || '[]');
+          const updatedLocal = localData.map((i: any) => i.id === id ? { ...i, ...data } : i);
+          writeCache(cacheKey, updatedLocal);
 
-          try {
-            const { error } = await supabase
-              .from(tableName)
-              .update({ ...data, updated_at: new Date().toISOString() })
-              .eq('id', id);
-            
-            if (error) throw error;
-          } catch (e) {
-            console.error(`Update error for ${tableName}:`, e);
+          if (!supabaseLimitReached) {
+            try {
+              const { error } = await supabase
+                .from(tableName)
+                .update({ ...data, updated_at: new Date().toISOString() })
+                .eq('id', id);
+              
+              if (error) {
+                checkSupabaseError(error);
+                if (!supabaseLimitReached) throw error;
+              }
+            } catch (e: any) {
+              checkSupabaseError(e);
+              if (!supabaseLimitReached) {
+                console.error(`Update error for ${tableName}:`, e);
+              }
+            }
           }
         } catch (e) {
           console.error("Update error:", e);
@@ -175,15 +222,23 @@ class DataStore {
       },
 
       set: async (data: any) => {
-        invalidateCache(cacheKey);
-        try {
-          const { error } = await supabase
-            .from('web_settings')
-            .upsert([{ id: docId, ...data, updated_at: new Date().toISOString() }], { onConflict: 'id' });
-          
-          if (error) throw error;
-        } catch (e) {
-          console.error("Doc set error:", e);
+        writeCache(cacheKey, data);
+        if (!supabaseLimitReached) {
+          try {
+            const { error } = await supabase
+              .from('web_settings')
+              .upsert([{ id: docId, ...data, updated_at: new Date().toISOString() }], { onConflict: 'id' });
+            
+            if (error) {
+              checkSupabaseError(error);
+              if (!supabaseLimitReached) throw error;
+            }
+          } catch (e: any) {
+            checkSupabaseError(e);
+            if (!supabaseLimitReached) {
+              console.error("Doc set error:", e);
+            }
+          }
         }
         window.dispatchEvent(new Event('storage'));
       }
@@ -246,33 +301,52 @@ export class MediaDB {
   }
 
   async save(item: any): Promise<void> {
-    invalidateCache(this.cacheKey);
+    const current = JSON.parse(localStorage.getItem(this.cacheKey) || '[]');
+    writeCache(this.cacheKey, [item, ...current.filter((i: any) => i.id !== item.id)]);
     
-    try {
-      const dbItem = this.toSnakeCase(item);
-      const { error } = await supabase
-        .from('media_meta')
-        .upsert([dbItem], { onConflict: 'id' });
-      
-      if (error) throw error;
-    } catch (e) {
-      console.error("Media save error:", e);
+    if (!supabaseLimitReached) {
+      try {
+        const dbItem = this.toSnakeCase(item);
+        const { error } = await supabase
+          .from('media_meta')
+          .upsert([dbItem], { onConflict: 'id' });
+        
+        if (error) {
+          checkSupabaseError(error);
+          if (!supabaseLimitReached) throw error;
+        }
+      } catch (e: any) {
+        checkSupabaseError(e);
+        if (!supabaseLimitReached) {
+          console.error("Media save error:", e);
+        }
+      }
     }
     window.dispatchEvent(new Event('storage'));
   }
 
   async delete(id: string): Promise<void> {
-    invalidateCache(this.cacheKey);
+    const current = JSON.parse(localStorage.getItem(this.cacheKey) || '[]');
+    const updated = current.filter((i: any) => i.id !== id);
+    writeCache(this.cacheKey, updated);
 
-    try {
-      const { error } = await supabase
-        .from('media_meta')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-    } catch (e) {
-      console.error("Media delete error:", e);
+    if (!supabaseLimitReached) {
+      try {
+        const { error } = await supabase
+          .from('media_meta')
+          .delete()
+          .eq('id', id);
+        
+        if (error) {
+          checkSupabaseError(error);
+          if (!supabaseLimitReached) throw error;
+        }
+      } catch (e: any) {
+        checkSupabaseError(e);
+        if (!supabaseLimitReached) {
+          console.error("Media delete error:", e);
+        }
+      }
     }
     window.dispatchEvent(new Event('storage'));
   }
@@ -308,8 +382,10 @@ export class MediaDB {
       // Convert response to camelCase
       const camelCaseResponse = response ? response.map((item: any) => this.toCamelCase(item)) : [];
       
-      // Invalidate cache to force fresh load
-      invalidateCache(this.cacheKey);
+      // Update localStorage cache
+      const current = JSON.parse(localStorage.getItem(this.cacheKey) || '[]');
+      const updated = current.map((i: any) => i.id === id ? camelCaseResponse[0] || i : i);
+      writeCache(this.cacheKey, updated);
       
       window.dispatchEvent(new Event('storage'));
       return camelCaseResponse[0] || { id, ...data };
@@ -380,46 +456,65 @@ export class BlogDB {
 
   async save(item: any): Promise<any> {
     try {
-      const dbItem = this.toSnakeCase(item);
-      console.log('📝 [BLOG SAVE] Original item:', item);
-      console.log('📝 [BLOG SAVE] Converted to snake_case:', dbItem);
-      
-      // Try without .select() first to avoid column access issues
-      const { error } = await supabase
-        .from('blog')
-        .upsert([dbItem], { onConflict: 'id' });
-      
-      if (error) {
-        console.error('❌ [BLOG SAVE] Supabase error:', error);
-        throw error;
+      // Optimistic update: update cache immediately
+      const current = JSON.parse(localStorage.getItem(this.cacheKey) || '[]');
+      const updated = [item, ...current.filter((i: any) => i.id !== item.id)];
+      writeCache(this.cacheKey, updated);
+
+      if (!supabaseLimitReached) {
+        const dbItem = this.toSnakeCase(item);
+        console.log('📝 [BLOG SAVE] Original item:', item);
+        console.log('📝 [BLOG SAVE] Converted to snake_case:', dbItem);
+        
+        // Try without .select() first to avoid column access issues
+        const { error } = await supabase
+          .from('blog')
+          .upsert([dbItem], { onConflict: 'id' });
+        
+        if (error) {
+          console.error('❌ [BLOG SAVE] Supabase error:', error);
+          checkSupabaseError(error);
+          if (!supabaseLimitReached) throw error;
+        } else {
+          console.log('✅ [BLOG SAVE] Success');
+        }
       }
-      
-      console.log('✅ [BLOG SAVE] Success');
-      
-      // Invalidate cache to force fresh load
-      invalidateCache(this.cacheKey);
       
       window.dispatchEvent(new Event('storage'));
       return item;
-    } catch (e) {
-      console.error('❌ [BLOG SAVE] Full error:', e);
-      throw e;
+    } catch (e: any) {
+      checkSupabaseError(e);
+      if (!supabaseLimitReached) {
+        console.error('❌ [BLOG SAVE] Full error:', e);
+        throw e;
+      }
+      return item; // Return item even if DB fails (we have it in cache)
     }
   }
 
   async delete(id: string): Promise<void> {
     try {
-      invalidateCache(this.cacheKey);
+      const current = JSON.parse(localStorage.getItem(this.cacheKey) || '[]');
+      const updated = current.filter((i: any) => i.id !== id);
+      writeCache(this.cacheKey, updated);
 
-      const { error } = await supabase
-        .from('blog')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-    } catch (e) {
-      console.error('Blog delete error:', e);
-      throw e;
+      if (!supabaseLimitReached) {
+        const { error } = await supabase
+          .from('blog')
+          .delete()
+          .eq('id', id);
+        
+        if (error) {
+          checkSupabaseError(error);
+          if (!supabaseLimitReached) throw error;
+        }
+      }
+    } catch (e: any) {
+      checkSupabaseError(e);
+      if (!supabaseLimitReached) {
+        console.error('Blog delete error:', e);
+        throw e;
+      }
     }
     window.dispatchEvent(new Event('storage'));
   }
@@ -492,37 +587,57 @@ export class ProjectDB {
   }
 
   async save(item: any): Promise<void> {
-    invalidateCache(this.cacheKey);
+    const current = JSON.parse(localStorage.getItem(this.cacheKey) || '[]');
+    const updated = [item, ...current.filter((i: any) => i.id !== item.id)];
+    writeCache(this.cacheKey, updated);
     
-    try {
-      const dbItem = this.toSnakeCase(item);
-      console.log('Saving project to DB:', dbItem);
-      const { error } = await supabase
-        .from('projects')
-        .upsert([dbItem], { onConflict: 'id' });
-      
-      if (error) throw error;
-      console.log('Project saved successfully');
-    } catch (e) {
-      console.error("Project save error:", e);
-      throw e;
+    if (!supabaseLimitReached) {
+      try {
+        const dbItem = this.toSnakeCase(item);
+        console.log('Saving project to DB:', dbItem);
+        const { error } = await supabase
+          .from('projects')
+          .upsert([dbItem], { onConflict: 'id' });
+        
+        if (error) {
+          checkSupabaseError(error);
+          if (!supabaseLimitReached) throw error;
+        }
+        console.log('Project saved successfully');
+      } catch (e: any) {
+        checkSupabaseError(e);
+        if (!supabaseLimitReached) {
+          console.error("Project save error:", e);
+          throw e;
+        }
+      }
     }
     window.dispatchEvent(new Event('storage'));
   }
 
   async delete(id: string): Promise<void> {
-    invalidateCache(this.cacheKey);
+    const current = JSON.parse(localStorage.getItem(this.cacheKey) || '[]');
+    const updated = current.filter((i: any) => i.id !== id);
+    writeCache(this.cacheKey, updated);
 
-    try {
-      const { error } = await supabase
-        .from('projects')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-    } catch (e) {
-      console.error("Project delete error:", e);
-      throw e;
+    if (!supabaseLimitReached) {
+      try {
+        const { error } = await supabase
+          .from('projects')
+          .delete()
+          .eq('id', id);
+        
+        if (error) {
+          checkSupabaseError(error);
+          if (!supabaseLimitReached) throw error;
+        }
+      } catch (e: any) {
+        checkSupabaseError(e);
+        if (!supabaseLimitReached) {
+          console.error("Project delete error:", e);
+          throw e;
+        }
+      }
     }
     window.dispatchEvent(new Event('storage'));
   }

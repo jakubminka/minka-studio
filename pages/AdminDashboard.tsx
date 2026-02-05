@@ -33,7 +33,7 @@ import InquiryManager from '../components/Admin/InquiryManager';
 import WebSettingsManager from '../components/Admin/WebSettingsManager';
 import SystemManager from '../components/Admin/SystemManager';
 import { SPECIALIZATIONS } from '../constants';
-import { checkFirestoreConnection } from '../lib/db';
+import { checkFirestoreConnection, getSupabaseLimitStatus } from '../lib/db';
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -41,6 +41,7 @@ const AdminDashboard: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [stats, setStats] = useState<any>(null);
   const [isOnline, setIsOnline] = useState<boolean | null>(null);
+  const [supabaseLimitReached, setSupabaseLimitReached] = useState(false);
 
   useEffect(() => {
     const isAuth = localStorage.getItem('admin_auth');
@@ -54,11 +55,17 @@ const AdminDashboard: React.FC = () => {
       
       const connection = await checkFirestoreConnection();
       setIsOnline(connection);
+      
+      setSupabaseLimitReached(getSupabaseLimitStatus());
     };
 
     loadData();
+    const interval = setInterval(() => setSupabaseLimitReached(getSupabaseLimitStatus()), 2000);
     window.addEventListener('storage', loadData);
-    return () => window.removeEventListener('storage', loadData);
+    return () => {
+      window.removeEventListener('storage', loadData);
+      clearInterval(interval);
+    };
   }, [navigate]);
 
   const handleLogout = () => {
@@ -184,6 +191,32 @@ const AdminDashboard: React.FC = () => {
             </div>
           </div>
         </header>
+
+        {supabaseLimitReached && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mx-10 mt-6 p-6 bg-yellow-50 border-2 border-yellow-400 rounded-sm flex items-start gap-4"
+          >
+            <AlertTriangle className="text-yellow-600 shrink-0 mt-0.5" size={24} />
+            <div className="flex-grow">
+              <h3 className="text-xs font-black uppercase tracking-widest text-yellow-900 mb-2">Supabase Limit Dosažen</h3>
+              <p className="text-xs text-yellow-800 leading-relaxed mb-3">
+                Dosažli jste free tier limit v Supabase. Všechny úpravy se ukládají pouze lokálně v browseru.
+                Po refreshi stránky se změny zobrazí, ale nebudou synchronizované do cloud.
+              </p>
+              <div className="flex gap-3">
+                <a 
+                  href="https://supabase.com/dashboard" 
+                  target="_blank"
+                  className="text-[9px] font-black uppercase tracking-widest bg-yellow-600 text-white px-4 py-2 hover:bg-yellow-700 transition-all flex items-center gap-2"
+                >
+                  Upgrade Supabase <ExternalLink size={12} />
+                </a>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         <div className="p-10">
           <AnimatePresence mode="wait">
