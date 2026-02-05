@@ -100,7 +100,15 @@ const FileManager: React.FC = () => {
           size: `${(fileToUpload.size / (1024 * 1024)).toFixed(2)} MB`,
           updatedAt: new Date().toISOString(), url: publicUrl, parentId: currentFolderId, specializationId: storagePath
         };
-        await mediaDB.save(newItem);
+        console.log('Saving metadata to mediaDB:', newItem);
+        try {
+          await mediaDB.save(newItem);
+          console.log('Metadata saved successfully');
+        } catch (dbErr) {
+          console.error('Failed to save metadata:', dbErr);
+          setUploadQueue(prev => prev.map(u => u.id === uploadId ? { ...u, status: 'error', error: 'Metadata save failed: ' + (dbErr instanceof Error ? dbErr.message : String(dbErr)) } : u));
+          return;
+        }
         setUploadQueue(prev => prev.map(u => u.id === uploadId ? { ...u, status: 'completed', progress: 100 } : u));
         loadFiles();
       } catch (err: any) {
