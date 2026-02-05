@@ -1401,13 +1401,19 @@ const FileManagerV2: React.FC = () => {
               onClick={e => e.stopPropagation()}
               className="bg-white rounded-lg p-6 max-w-md w-full space-y-4"
             >
-              <h3 className="text-lg font-black uppercase tracking-widest">Přesunout do složky</h3>
+              <h3 className="text-lg font-black uppercase tracking-widest">
+                {moveToFolderId === '__select__' ? `Přesunout ${selectedIds.size} položek` : 'Přesunout do složky'}
+              </h3>
 
               <div className="space-y-2 max-h-96 overflow-y-auto">
                 {/* Root */}
                 <button
                   onClick={() => {
-                    handleMoveToFolder(moveToFolderId, null);
+                    if (moveToFolderId === '__select__') {
+                      handleBulkMove(null);
+                    } else {
+                      handleMoveToFolder(moveToFolderId, null);
+                    }
                   }}
                   className="w-full text-left px-4 py-2 hover:bg-blue-50 rounded text-[10px] font-black uppercase flex items-center gap-2"
                 >
@@ -1419,7 +1425,11 @@ const FileManagerV2: React.FC = () => {
                   <button
                     key={folder.id}
                     onClick={() => {
-                      handleMoveToFolder(moveToFolderId, folder.id);
+                      if (moveToFolderId === '__select__') {
+                        handleBulkMove(folder.id);
+                      } else {
+                        handleMoveToFolder(moveToFolderId, folder.id);
+                      }
                     }}
                     className="w-full text-left px-4 py-2 pl-8 hover:bg-blue-50 rounded text-[10px] font-black uppercase"
                   >
