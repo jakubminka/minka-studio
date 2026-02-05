@@ -2,21 +2,19 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Mail, Phone, MapPin, Instagram, Facebook, Youtube, Linkedin, 
-  Briefcase, Info, ArrowUpRight, Camera, Send, CheckCircle2, 
-  Shield, RefreshCw, FileText, Globe, Building2, User, Layers
+  Briefcase, Info, ArrowUpRight, Send, CheckCircle2, 
+  Shield, RefreshCw, FileText, Globe, Building2, User
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { WebSettings, Project } from '../types';
+import { WebSettings } from '../types';
 import HumanVerificationModal from '../components/HumanVerificationModal';
-import { dataStore, projectDB } from '../lib/db';
-import { PROJECTS } from '../constants';
+import { dataStore } from '../lib/db';
 
 const Contact: React.FC = () => {
   const [formState, setFormState] = useState<'idle' | 'loading' | 'success'>('idle');
   const [isVerificationOpen, setIsVerificationOpen] = useState(false);
   const [formData, setFormData] = useState({ name: '', email: '', subject: '', message: '' });
-  const [projects, setProjects] = useState<Project[]>([]);
   
   const [settings, setSettings] = useState<WebSettings>({
     contactHeader: 'https://images.unsplash.com/photo-1534536281715-e28d76689b4d?auto=format&fit=crop&q=80&w=2000',
@@ -65,10 +63,6 @@ const Contact: React.FC = () => {
     const load = async () => {
       const saved = await dataStore.doc('web_settings').get();
       if (saved) setSettings(prev => ({ ...prev, ...saved }));
-      
-      const dbProjects = await projectDB.getAll();
-      if (dbProjects && dbProjects.length > 0) setProjects(dbProjects);
-      else setProjects(PROJECTS);
     };
     load();
   }, []);
@@ -240,39 +234,6 @@ const Contact: React.FC = () => {
           <Link to="/jak-pracuji" className="inline-flex items-center gap-4 bg-white text-[#007BFF] px-16 py-5 text-[11px] font-black uppercase tracking-[0.5em] hover:bg-black hover:text-white transition-all shadow-xl">
             JAK PRACUJI <ArrowUpRight size={20} />
           </Link>
-        </div>
-      </section>
-
-      {/* Další projekty */}
-      <section className="py-32 bg-gray-50 border-t border-gray-100">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="mb-20 text-center">
-            <span className="text-[#007BFF] font-black text-xs uppercase tracking-[0.7em] block mb-4">Více práce</span>
-            <h2 className="text-5xl md:text-7xl font-black uppercase tracking-tighter text-black">Další projekty</h2>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {projects.slice(0, 4).map((project) => (
-              <Link key={project.id} to={`/projekt/${project.id}`} className="group relative aspect-square overflow-hidden bg-black">
-                <img 
-                  src={project.thumbnailUrl} 
-                  alt={project.title}
-                  className="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-110 transition-all duration-700"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <div className="absolute inset-0 p-6 flex flex-col justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                  <h4 className="text-white font-black uppercase tracking-tighter text-lg mb-2">{project.title}</h4>
-                  <p className="text-[#007BFF] text-[8px] font-black uppercase tracking-widest flex items-center gap-2">
-                    DETAIL <ArrowUpRight size={10} />
-                  </p>
-                </div>
-              </Link>
-            ))}
-          </div>
-          <div className="mt-20 text-center">
-            <Link to="/portfolio" className="inline-flex items-center gap-4 text-[#007BFF] text-[11px] font-black uppercase tracking-[0.4em] group border-b-4 border-[#007BFF] pb-2 hover:text-black hover:border-black transition-all">
-              ZOBRAZIT VŠECHNY PROJEKTY <ArrowUpRight size={18} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-            </Link>
-          </div>
         </div>
       </section>
 
