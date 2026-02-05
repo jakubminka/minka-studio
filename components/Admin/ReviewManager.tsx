@@ -57,6 +57,7 @@ const ReviewManager: React.FC = () => {
 
   const loadData = async () => {
     const initKey = 'jakub_minka_reviews_initialized';
+    const cacheKey = 'jakub_minka_cache_reviews';
     // Try to migrate from old localStorage key
     const oldData = localStorage.getItem('jakub_minka_reviews');
     if (oldData) {
@@ -69,9 +70,15 @@ const ReviewManager: React.FC = () => {
 
     // Load from dataStore
     const saved = await dataStore.collection('reviews').getAll();
+    const cached = JSON.parse(localStorage.getItem(cacheKey) || '[]');
     const isInitialized = localStorage.getItem(initKey) === 'true';
     if (saved && saved.length > 0) {
       setReviews(saved.map(mapFromDb));
+      if (!isInitialized) localStorage.setItem(initKey, 'true');
+      return;
+    }
+    if (cached && cached.length > 0) {
+      setReviews(cached.map(mapFromDb));
       if (!isInitialized) localStorage.setItem(initKey, 'true');
       return;
     }

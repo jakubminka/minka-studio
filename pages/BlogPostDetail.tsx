@@ -4,6 +4,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { BlogPost } from '../types';
 import { motion } from 'framer-motion';
 import { Calendar, User, ArrowLeft, Clock } from 'lucide-react';
+import { blogDB } from '../lib/db';
 
 const BlogPostDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -12,9 +13,8 @@ const BlogPostDetail: React.FC = () => {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    const savedPosts = localStorage.getItem('jakub_minka_blog');
-    if (savedPosts) {
-      const posts = JSON.parse(savedPosts);
+    const load = async () => {
+      const posts = await blogDB.getAll();
       const found = posts.find((p: BlogPost) => p.id === id);
       if (found) {
         setPost(found);
@@ -22,8 +22,9 @@ const BlogPostDetail: React.FC = () => {
       } else {
         navigate('/blog');
       }
-    }
-  }, [id]);
+    };
+    load();
+  }, [id, navigate]);
 
   if (!post) return null;
 

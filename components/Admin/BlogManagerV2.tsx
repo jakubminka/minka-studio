@@ -82,7 +82,7 @@ const BlogManagerV2: React.FC = () => {
         excerpt: formData.excerpt || '',
         content: contentHTML,
         coverImage: formData.coverImage || '',
-        date: new Date(formData.date || new Date()).toISOString(),
+        date: editingId ? new Date().toISOString() : new Date(formData.date || new Date()).toISOString(),
         author: formData.author || 'Jakub Minka',
         tags: formData.tags || []
       };

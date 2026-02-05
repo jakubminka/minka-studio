@@ -4,6 +4,7 @@ import { BlogPost } from '../types';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Calendar, User, ArrowRight, Tag } from 'lucide-react';
+import { blogDB, dataStore } from '../lib/db';
 
 const Blog: React.FC = () => {
   const [posts, setPosts] = useState<BlogPost[]>([]);
@@ -11,16 +12,17 @@ const Blog: React.FC = () => {
 
   useEffect(() => {
     document.title = "Blog | Jakub Minka - Fotograf a kameraman";
-    const savedPosts = localStorage.getItem('jakub_minka_blog');
-    if (savedPosts) {
-      setPosts(JSON.parse(savedPosts));
-    }
+    const load = async () => {
+      const savedPosts = await blogDB.getAll();
+      const sorted = [...savedPosts].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      setPosts(sorted);
 
-    const savedSettings = localStorage.getItem('jakub_minka_web_settings');
-    if (savedSettings) {
-      const settings = JSON.parse(savedSettings);
-      if (settings.blogHeader) setHeaderBg(settings.blogHeader);
-    }
+      const savedSettings = await dataStore.doc('web_settings').get();
+      if (savedSettings && savedSettings.blogHeader) setHeaderBg(savedSettings.blogHeader);
+    };
+    load();
+    window.addEventListener('storage', load);
+    return () => window.removeEventListener('storage', load);
   }, []);
 
   return (

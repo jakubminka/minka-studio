@@ -40,6 +40,17 @@ const Home: React.FC = () => {
   const cursorX = useSpring(mouseX, { damping: 30, stiffness: 250 });
   const cursorY = useSpring(mouseY, { damping: 30, stiffness: 250 });
 
+  const mapReviewFromDb = (item: any): Review => {
+    return {
+      id: item.id,
+      author: item.author || 'Anonymní klient',
+      text: item.text || item.content || '',
+      rating: typeof item.rating === 'number' ? item.rating : 5,
+      platform: item.platform || item.company || 'manual',
+      date: item.date || ''
+    } as Review;
+  };
+
   useEffect(() => {
     const load = async () => {
       const savedProjects = await projectDB.getAll();
@@ -53,7 +64,9 @@ const Home: React.FC = () => {
       if (savedPartners) setPartners(savedPartners);
 
       const savedReviews = await dataStore.collection('reviews').getAll();
-      if (savedReviews.length > 0) setReviews(savedReviews);
+      const cachedReviews = JSON.parse(localStorage.getItem('jakub_minka_cache_reviews') || '[]');
+      if (savedReviews.length > 0) setReviews(savedReviews.map(mapReviewFromDb));
+      else if (cachedReviews.length > 0) setReviews(cachedReviews.map(mapReviewFromDb));
       else setReviews(DEFAULT_REVIEWS);
       
       setIsDataLoaded(true);
