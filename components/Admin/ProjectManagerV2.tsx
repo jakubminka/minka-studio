@@ -307,17 +307,36 @@ const ProjectManagerV2: React.FC = () => {
     // Auto-select random thumbnail from gallery if gallery has images
     let thumbnailUrl = formData.thumbnailUrl || '';
     const galleryImages = (formData.gallery || []).filter(item => item.type === 'image');
+    
     if (!thumbnailUrl && galleryImages.length > 0) {
       const randomImage = galleryImages[Math.floor(Math.random() * galleryImages.length)];
       thumbnailUrl = randomImage.url;
       console.log('🎲 Auto-selected random thumbnail from gallery:', randomImage.url);
+    } else if (!thumbnailUrl && galleryImages.length === 0 && youtubeUrls.length > 0) {
+      // If no images but has YouTube videos, use first YouTube thumbnail
+      const firstYoutubeUrl = youtubeUrls[0];
+      const videoId = firstYoutubeUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/)?.[1];
+      if (videoId) {
+        thumbnailUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+        console.log('🎬 Auto-selected YouTube thumbnail:', thumbnailUrl);
+      }
     }
     
     setIsProcessing(true);
 
     try {
-      // Serialize youtubeUrls to JSON string
-      const youtubeUrlsJson = JSON.stringify(youtubeUrls.filter(u => u.trim()));
+      // Add YouTube URLs to gallery as GalleryItem objects
+      const youtubeGalleryItems: GalleryItem[] = youtubeUrls
+        .filter(url => url.trim())
+        .map(url => ({
+          id: 'yt-' + Math.random().toString(36).substr(2, 9),
+          type: 'video' as const,
+          url: url.trim(),
+          source: 'youtube' as const
+        }));
+      
+      // Combine existing gallery items (from storage/uploads) with YouTube items
+      const combinedGallery = [...(formData.gallery || []), ...youtubeGalleryItems];
       
       const project: Project = {
         id: editingId || 'p-' + Math.random().toString(36).substr(2, 9),
@@ -330,9 +349,9 @@ const ProjectManagerV2: React.FC = () => {
         date: formData.date || new Date().toISOString(),
         thumbnailUrl,
         thumbnailSource: 'storage',
-        gallery: formData.gallery || [],
+        gallery: combinedGallery,
         servicesDelivered: formData.servicesDelivered || '',
-        youtubeUrl: youtubeUrlsJson  // Store as JSON string in gallery metadata or description
+        youtubeUrl: '' // Keep for backward compatibility but not used
       };
 
       await projectDB.save(project);
@@ -377,16 +396,19 @@ const ProjectManagerV2: React.FC = () => {
 
   const handleEdit = (project: Project) => {
     setEditingId(project.id);
-    setFormData(project);
     
-    // Parse youtubeUrl - can be JSON array or single string
-    try {
-      const parsed = JSON.parse(project.youtubeUrl || '[]');
-      setYoutubeUrls(Array.isArray(parsed) ? parsed : []);
-    } catch {
-      // If not JSON, treat as single URL
-      setYoutubeUrls(project.youtubeUrl ? [project.youtubeUrl] : []);
-    }
+    // Extract YouTube videos from gallery
+    const youtubeItems = (project.gallery || []).filter(item => item.source === 'youtube');
+    const nonYoutubeItems = (project.gallery || []).filter(item => item.source !== 'youtube');
+    
+    // Set YouTube URLs state
+    setYoutubeUrls(youtubeItems.map(item => item.url));
+    
+    // Set form data with non-YouTube gallery items only
+    setFormData({
+      ...project,
+      gallery: nonYoutubeItems
+    });
     
     setShowForm(true);
   };

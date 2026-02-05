@@ -124,7 +124,7 @@ const ProjectDetail: React.FC = () => {
           />
         ) : singleVideoMode && singleVideoMode.source === 'youtube' ? (
           <iframe
-            src={`${getYouTubeEmbedUrl(singleVideoMode.url)}?autoplay=1&mute=1&loop=1&controls=0&showinfo=0&modestbranding=1&playsinline=1`}
+            src={`${getYouTubeEmbedUrl(singleVideoMode.url)}?autoplay=1&mute=1&loop=1&playlist=${getYouTubeVideoId(singleVideoMode.url)}&controls=0&showinfo=0&modestbranding=1&playsinline=1`}
             className="absolute inset-0 w-full h-full object-cover opacity-60"
             style={{ pointerEvents: 'none' }}
             allow="autoplay; encrypted-media"
