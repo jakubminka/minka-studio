@@ -126,6 +126,15 @@ const BlogManagerV2: React.FC = () => {
   };
 
   const handleMediaPickerSelect = (item: FileItem) => {
+    // If no cover image is set, use this as cover image
+    if (!formData.coverImage && item.type === 'image') {
+      setFormData({ ...formData, coverImage: item.url });
+      setShowMediaPicker(false);
+      alert('✓ Titulní fotka nastavena');
+      return;
+    }
+    
+    // Otherwise, insert into content
     if (item.type === 'image') {
       insertImage(item);
     } else if (item.type === 'video') {

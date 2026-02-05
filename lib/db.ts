@@ -358,12 +358,21 @@ export class BlogDB {
   async save(item: any): Promise<any> {
     try {
       const dbItem = this.toSnakeCase(item);
-      const { data, error } = await supabase
-        .from('blog')
-        .upsert([dbItem], { onConflict: 'id' })
-        .select();
+      console.log('📝 [BLOG SAVE] Original item:', item);
+      console.log('📝 [BLOG SAVE] Converted to snake_case:', dbItem);
+      console.log('📝 [BLOG SAVE] Tags type:', typeof dbItem.tags, 'Value:', dbItem.tags);
       
-      if (error) throw error;
+      // Try without .select() first to avoid column access issues
+      const { error } = await supabase
+        .from('blog')
+        .upsert([dbItem], { onConflict: 'id' });
+      
+      if (error) {
+        console.error('❌ [BLOG SAVE] Supabase error:', error);
+        throw error;
+      }
+      
+      console.log('✅ [BLOG SAVE] Success');
       
       // Update localStorage
       const current = JSON.parse(localStorage.getItem(this.cacheKey) || '[]');
@@ -371,9 +380,9 @@ export class BlogDB {
       localStorage.setItem(this.cacheKey, JSON.stringify(updated));
       
       window.dispatchEvent(new Event('storage'));
-      return data?.[0] ? this.toCamelCase(data[0]) : item;
+      return item;
     } catch (e) {
-      console.error('Blog save error:', e);
+      console.error('❌ [BLOG SAVE] Full error:', e);
       throw e;
     }
   }

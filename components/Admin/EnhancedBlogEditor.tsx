@@ -57,8 +57,11 @@ const EnhancedBlogEditor: React.FC<EnhancedBlogEditorProps> = ({
     // Inline code
     html = html.replace(/`([^`]+)`/g, '<code class="bg-gray-100 px-2 py-1 rounded font-mono text-sm">$1</code>');
 
-    // Blockquotes
-    html = html.replace(/^> (.*?)$/gm, '<blockquote class="border-l-4 border-[#007BFF] pl-4 italic text-gray-600 my-2">$1</blockquote>');
+    // Blockquotes - process blocks of consecutive lines starting with >
+    html = html.replace(/(^> .+$(\n> .+$)*)/gm, (match) => {
+      const lines = match.split('\n').map(line => line.replace(/^> /, '').trim());
+      return `<blockquote class="border-l-4 border-[#007BFF] pl-4 italic text-gray-600 my-2">${lines.join('<br />')}</blockquote>`;
+    });
 
     // Headings
     html = html.replace(/^### (.*?)$/gm, '<h3 class="text-lg font-black uppercase tracking-widest mt-6 mb-2">$1</h3>');
@@ -80,9 +83,11 @@ const EnhancedBlogEditor: React.FC<EnhancedBlogEditorProps> = ({
     // Videos
     html = html.replace(/<video[^>]*src="([^"]+)"[^>]*><\/video>/g, '<div class="my-4 rounded overflow-hidden"><video src="$1" controls class="w-full" /></div>');
 
-    // Lists
-    html = html.replace(/^[\*\-] (.*?)$/gm, '<li class="ml-6">$1</li>');
-    html = html.replace(/(<li[^>]*>.*<\/li>)/s, '<ul class="list-disc my-2">$1</ul>');
+    // Lists - process blocks of consecutive lines starting with * or -
+    html = html.replace(/(^[\*\-] .+$(\n[\*\-] .+$)*)/gm, (match) => {
+      const items = match.split('\n').map(line => line.replace(/^[\*\-] /, '').trim());
+      return `<ul class="list-disc my-2">${items.map(item => `<li class="ml-6">${item}</li>`).join('')}</ul>`;
+    });
 
     // Line breaks to paragraphs
     html = html.split('\n\n').map(para => {
