@@ -6,8 +6,10 @@ CREATE TABLE IF NOT EXISTS blog (
   title TEXT NOT NULL,
   content TEXT NOT NULL,
   excerpt TEXT,
+  cover_image TEXT,
   image_url TEXT,
   author TEXT,
+  tags JSONB,
   date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

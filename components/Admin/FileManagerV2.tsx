@@ -48,6 +48,9 @@ const FileManagerV2: React.FC = () => {
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
   const [draggedItem, setDraggedItem] = useState<string | null>(null);
   const [moveToFolderId, setMoveToFolderId] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<'name' | 'date' | 'type'>('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [showBulkDelete, setShowBulkDelete] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadFiles = async () => {
@@ -232,15 +235,31 @@ const FileManagerV2: React.FC = () => {
   };
 
   const currentItems = useMemo(() => {
-    return items.filter(item => 
+    let filtered = items.filter(item => 
       item.parentId === currentFolderId && 
       (searchQuery === '' || item.name.toLowerCase().includes(searchQuery.toLowerCase()))
-    ).sort((a, b) => {
+    );
+
+    // Sorting
+    filtered.sort((a, b) => {
+      let compareVal = 0;
+      if (sortBy === 'name') {
+        compareVal = a.name.localeCompare(b.name);
+      } else if (sortBy === 'date') {
+        compareVal = new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
+      } else if (sortBy === 'type') {
+        compareVal = a.type.localeCompare(b.type);
+      }
+      return sortOrder === 'asc' ? compareVal : -compareVal;
+    });
+
+    // Move folders to top
+    return filtered.sort((a, b) => {
       if (a.type === 'folder' && b.type !== 'folder') return -1;
       if (a.type !== 'folder' && b.type === 'folder') return 1;
-      return a.name.localeCompare(b.name);
+      return 0;
     });
-  }, [items, currentFolderId, searchQuery]);
+  }, [items, currentFolderId, searchQuery, sortBy, sortOrder]);
 
   const previewItems = useMemo(() => {
     return currentItems.filter(item => item.type !== 'folder');
@@ -313,7 +332,7 @@ const FileManagerV2: React.FC = () => {
         </div>
 
         {/* Controls */}
-        <div className="flex gap-3 flex-wrap">
+        <div className="flex gap-3 flex-wrap items-center">
           <button 
             onClick={() => fileInputRef.current?.click()} 
             className="bg-[#007BFF] text-white px-6 py-2 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-blue-700 transition-all rounded"
@@ -339,6 +358,35 @@ const FileManagerV2: React.FC = () => {
               className="w-full pl-10 pr-4 py-2 border border-gray-200 bg-white text-black text-[10px] font-black uppercase rounded focus:border-[#007BFF] outline-none"
             />
           </div>
+
+          {/* Sort Controls */}
+          <select 
+            value={sortBy}
+            onChange={e => setSortBy(e.target.value as 'name' | 'date' | 'type')}
+            className="px-4 py-2 border border-gray-200 rounded text-[10px] font-black uppercase bg-white hover:border-[#007BFF] cursor-pointer"
+          >
+            <option value="name">Seřadit: Název</option>
+            <option value="date">Seřadit: Datum</option>
+            <option value="type">Seřadit: Typ</option>
+          </select>
+
+          <button 
+            onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+            className="px-4 py-2 border border-gray-200 rounded text-[10px] font-black uppercase bg-white hover:bg-gray-50"
+            title={sortOrder === 'asc' ? 'Vzestupně' : 'Sestupně'}
+          >
+            {sortOrder === 'asc' ? '▲' : '▼'}
+          </button>
+
+          {/* Bulk Actions */}
+          {selectedIds.size > 0 && (
+            <button 
+              onClick={() => setShowBulkDelete(true)}
+              className="px-6 py-2 bg-red-500 text-white text-[10px] font-black uppercase rounded hover:bg-red-600 transition-all flex items-center gap-2"
+            >
+              <Trash2 size={14} /> Smazat {selectedIds.size}
+            </button>
+          )}
         </div>
       </div>
 
@@ -376,6 +424,27 @@ const FileManagerV2: React.FC = () => {
                   <p className="text-[9px] font-black uppercase truncate w-full text-center text-gray-600 group-hover:text-[#007BFF]">{item.name}</p>
                   
                   {item.type !== 'folder' && <p className="text-[8px] text-gray-400">{item.size}</p>}
+
+                  {/* Select Checkbox */}
+                  <div className="absolute top-2 left-2 z-10">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedIds(prev => {
+                          const newSet = new Set(prev);
+                          if (newSet.has(item.id)) {
+                            newSet.delete(item.id);
+                          } else {
+                            newSet.add(item.id);
+                          }
+                          return newSet;
+                        });
+                      }}
+                      className={`p-2 rounded transition-all ${selectedIds.has(item.id) ? 'bg-[#007BFF] text-white' : 'bg-white/80 text-gray-400 group-hover:text-gray-600'}`}
+                    >
+                      {selectedIds.has(item.id) ? <CheckSquare size={16} /> : <Square size={16} />}
+                    </button>
+                  </div>
 
                   {/* Hover Actions */}
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 opacity-0 group-hover:opacity-100 transition-all rounded flex items-center justify-center gap-2">
@@ -427,6 +496,20 @@ const FileManagerV2: React.FC = () => {
           <table className="w-full text-[11px] font-black uppercase tracking-widest">
             <thead className="sticky top-0 bg-gray-100 border-b border-gray-200">
               <tr>
+                <th className="px-3 py-3 text-center w-12">
+                  <button
+                    onClick={() => {
+                      if (selectedIds.size === currentItems.length) {
+                        setSelectedIds(new Set());
+                      } else {
+                        setSelectedIds(new Set(currentItems.map(i => i.id)));
+                      }
+                    }}
+                    className="text-gray-600 hover:text-gray-900"
+                  >
+                    {selectedIds.size === currentItems.length && currentItems.length > 0 ? <CheckSquare size={14} /> : <Square size={14} />}
+                  </button>
+                </th>
                 <th className="px-6 py-3 text-left">Název</th>
                 <th className="px-6 py-3 text-left">Typ</th>
                 <th className="px-6 py-3 text-left">Velikost</th>
@@ -436,7 +519,26 @@ const FileManagerV2: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {currentItems.map(item => (
-                <tr key={item.id} className="hover:bg-gray-50 transition-all">
+                <tr key={item.id} className={`hover:bg-gray-50 transition-all ${selectedIds.has(item.id) ? 'bg-blue-50' : ''}`}>
+                  <td className="px-3 py-3 text-center">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedIds(prev => {
+                          const newSet = new Set(prev);
+                          if (newSet.has(item.id)) {
+                            newSet.delete(item.id);
+                          } else {
+                            newSet.add(item.id);
+                          }
+                          return newSet;
+                        });
+                      }}
+                      className="text-gray-600 hover:text-[#007BFF]"
+                    >
+                      {selectedIds.has(item.id) ? <CheckSquare size={14} /> : <Square size={14} />}
+                    </button>
+                  </td>
                   <td className="px-6 py-3 flex items-center gap-3">
                     {getFileIcon(item.type)}
                     <span className="truncate">{item.name}</span>

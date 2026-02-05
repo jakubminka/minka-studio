@@ -89,8 +89,10 @@ const BlogManagerV2: React.FC = () => {
         tags: formData.tags || []
       };
 
-      const { error } = await supabase.from('blog').upsert([postData], { onConflict: 'id' });
+      console.log('Saving blog post:', postData);
+      const { error, data } = await supabase.from('blog').upsert([postData], { onConflict: 'id' });
       
+      console.log('Upsert response:', { error, data });
       if (error) throw error;
 
       await loadData();
@@ -107,8 +109,9 @@ const BlogManagerV2: React.FC = () => {
       });
       setContentHTML('');
     } catch (err) {
-      console.error('Save error:', err);
-      alert('Chyba při uložení: ' + (err instanceof Error ? err.message : 'Neznámá chyba'));
+      console.error('Full error:', err);
+      const errorMsg = err instanceof Error ? err.message : JSON.stringify(err);
+      alert('Chyba při uložení: ' + errorMsg);
     } finally {
       setIsProcessing(false);
     }
