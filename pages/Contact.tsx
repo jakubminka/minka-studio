@@ -3,18 +3,20 @@ import React, { useState, useEffect } from 'react';
 import { 
   Mail, Phone, MapPin, Instagram, Facebook, Youtube, Linkedin, 
   Briefcase, Info, ArrowUpRight, Camera, Send, CheckCircle2, 
-  Shield, RefreshCw, FileText, Globe, Building2, User
+  Shield, RefreshCw, FileText, Globe, Building2, User, Layers
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { WebSettings } from '../types';
+import { WebSettings, Project } from '../types';
 import HumanVerificationModal from '../components/HumanVerificationModal';
-import { dataStore } from '../lib/db';
+import { dataStore, projectDB } from '../lib/db';
+const PROJECTS = require('../constants').PROJECTS as Project[];
 
 const Contact: React.FC = () => {
   const [formState, setFormState] = useState<'idle' | 'loading' | 'success'>('idle');
   const [isVerificationOpen, setIsVerificationOpen] = useState(false);
   const [formData, setFormData] = useState({ name: '', email: '', subject: '', message: '' });
+  const [projects, setProjects] = useState<Project[]>([]);
   
   const [settings, setSettings] = useState<WebSettings>({
     contactHeader: 'https://images.unsplash.com/photo-1534536281715-e28d76689b4d?auto=format&fit=crop&q=80&w=2000',
@@ -58,6 +60,10 @@ const Contact: React.FC = () => {
     const load = async () => {
       const saved = await dataStore.doc('web_settings').get();
       if (saved) setSettings(prev => ({ ...prev, ...saved }));
+      
+      const dbProjects = await projectDB.getAll();
+      if (dbProjects && dbProjects.length > 0) setProjects(dbProjects);
+      else setProjects(PROJECTS);
     };
     load();
   }, []);
@@ -139,6 +145,31 @@ const Contact: React.FC = () => {
           </div>
 
           <div className="space-y-10 pt-16 border-t border-gray-100">
+            <h3 className="text-xs font-black uppercase tracking-[0.4em] text-[#007BFF] flex items-center gap-3"><Globe size={16} /> Sociální sítě</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                { icon: Instagram, label: 'Instagram', url: settings.instagramUrl },
+                { icon: Facebook, label: 'Facebook', url: settings.facebookUrl },
+                { icon: Youtube, label: 'YouTube', url: settings.youtubeUrl },
+                { icon: Linkedin, label: 'LinkedIn', url: settings.linkedinUrl }
+              ].map((social, idx) => {
+                const Icon = social.icon;
+                return (
+                  <a
+                    key={idx}
+                    href={social.url || '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center h-16 bg-blue-50 text-[#007BFF] rounded-sm hover:bg-[#007BFF] hover:text-white transition-all shadow-sm group"
+                  >
+                    <Icon size={24} className="group-hover:scale-110 transition-transform" />
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="space-y-10 pt-16 border-t border-gray-100">
             <h3 className="text-xs font-black uppercase tracking-[0.4em] text-[#007BFF] flex items-center gap-3"><Building2 size={16} /> Obchodní údaje</h3>
             <div className="grid grid-cols-2 gap-10">
               <div><span className="text-[8px] font-black uppercase text-gray-400">IČO</span><p className="text-lg font-black">{settings.ico}</p></div>
@@ -188,23 +219,57 @@ const Contact: React.FC = () => {
         </div>
       </section>
 
-      {/* Backstage Photos - LIGHT VERSION */}
-      {settings.backstage?.length > 0 && (
-        <section className="py-40 bg-blue-50/30 overflow-hidden relative border-t border-blue-100">
-          <div className="max-w-7xl mx-auto px-6 mb-24 text-center">
-             <span className="text-[#007BFF] font-black text-xs uppercase tracking-[0.8em] block mb-6">Produkce & Zákulisí</span>
-             <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter leading-none text-black">JAK PRACUJI?</h2>
+      {/* Jak Pracuji CTA */}
+      <section className="py-24 md:py-32 bg-[#007BFF] text-white relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full -translate-y-1/2 translate-x-1/2"></div>
+          <div className="absolute bottom-0 left-0 w-80 h-80 bg-white rounded-full translate-y-1/2 -translate-x-1/2"></div>
+        </div>
+        <div className="relative z-10 max-w-7xl mx-auto px-6 text-center">
+          <h2 className="text-5xl md:text-7xl font-black uppercase tracking-tighter leading-none mb-8">
+            Chcete vidět naši práci?
+          </h2>
+          <p className="text-xl md:text-2xl text-white/80 font-medium mb-12 max-w-3xl mx-auto">
+            Podívejte se na zákulisí naší produkce. Fotografie, videa a příběhy z našich projektů.
+          </p>
+          <Link to="/jak-pracuji" className="inline-flex items-center gap-4 bg-white text-[#007BFF] px-16 py-5 text-[11px] font-black uppercase tracking-[0.5em] hover:bg-black hover:text-white transition-all shadow-xl">
+            JAK PRACUJI <ArrowUpRight size={20} />
+          </Link>
+        </div>
+      </section>
+
+      {/* Další projekty */}
+      <section className="py-32 bg-gray-50 border-t border-gray-100">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="mb-20 text-center">
+            <span className="text-[#007BFF] font-black text-xs uppercase tracking-[0.7em] block mb-4">Více práce</span>
+            <h2 className="text-5xl md:text-7xl font-black uppercase tracking-tighter text-black">Další projekty</h2>
           </div>
-          <div className="w-full flex flex-wrap bg-white">
-            {settings.backstage.map((url, i) => (
-              <motion.div key={i} initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} className="w-full sm:w-1/2 lg:w-1/4 aspect-square relative group overflow-hidden border border-gray-50">
-                <img src={url} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-110" alt={`Backstage ${i}`} />
-                <div className="absolute inset-0 bg-[#007BFF]/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              </motion.div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {projects.slice(0, 4).map((project) => (
+              <Link key={project.id} to={`/projekt/${project.id}`} className="group relative aspect-square overflow-hidden bg-black">
+                <img 
+                  src={project.thumbnailUrl} 
+                  alt={project.title}
+                  className="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-110 transition-all duration-700"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div className="absolute inset-0 p-6 flex flex-col justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                  <h4 className="text-white font-black uppercase tracking-tighter text-lg mb-2">{project.title}</h4>
+                  <p className="text-[#007BFF] text-[8px] font-black uppercase tracking-widest flex items-center gap-2">
+                    DETAIL <ArrowUpRight size={10} />
+                  </p>
+                </div>
+              </Link>
             ))}
           </div>
-        </section>
-      )}
+          <div className="mt-20 text-center">
+            <Link to="/portfolio" className="inline-flex items-center gap-4 text-[#007BFF] text-[11px] font-black uppercase tracking-[0.4em] group border-b-4 border-[#007BFF] pb-2 hover:text-black hover:border-black transition-all">
+              ZOBRAZIT VŠECHNY PROJEKTY <ArrowUpRight size={18} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+            </Link>
+          </div>
+        </div>
+      </section>
 
       <HumanVerificationModal isOpen={isVerificationOpen} onClose={() => setIsVerificationOpen(false)} onSuccess={handleVerificationSuccess} />
     </div>

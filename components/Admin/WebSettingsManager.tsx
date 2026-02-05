@@ -35,7 +35,7 @@ const WebSettingsManager: React.FC = () => {
     termsContent: ''
   });
 
-  const [activeTab, setActiveTab] = useState<'home' | 'portfolio' | 'specs' | 'contact' | 'footer' | 'legal'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'portfolio' | 'specs' | 'contact' | 'backstage' | 'footer' | 'legal'>('home');
   const [showPicker, setShowPicker] = useState(false);
   const [pickerTarget, setPickerTarget] = useState<{key: string, isSpec?: boolean} | null>(null);
   const [allItems, setAllItems] = useState<FileItem[]>([]);
@@ -98,6 +98,18 @@ const WebSettingsManager: React.FC = () => {
 
   const selectFromPicker = (url: string) => {
     if (!pickerTarget) return;
+    
+    // Handling for backstage gallery
+    if (pickerTarget.key === 'backstage-add') {
+      setSettings(prev => ({
+        ...prev,
+        backstage: [...(prev.backstage || []), url]
+      }));
+      setShowPicker(false);
+      return;
+    }
+    
+    // Handling for specialization headers
     if (pickerTarget.isSpec) {
       setSettings(prev => ({
         ...prev,
@@ -137,6 +149,7 @@ const WebSettingsManager: React.FC = () => {
           { id: 'portfolio', label: 'Portfolio', icon: Layers },
           { id: 'specs', label: 'Specializace', icon: Camera },
           { id: 'contact', label: 'Kontakt & Bio', icon: User },
+          { id: 'backstage', label: 'Jak Pracuji', icon: Camera },
           { id: 'footer', label: 'Ceník & Patička', icon: Wallet },
           { id: 'legal', label: 'Dokumenty', icon: FileText }
         ].map((tab) => (
@@ -286,6 +299,73 @@ const WebSettingsManager: React.FC = () => {
                     <div className="flex gap-4 items-center bg-gray-50 p-4 border"><Youtube className="text-[#FF0000]"/><input type="text" value={settings.youtubeUrl} onChange={e=>setSettings({...settings, youtubeUrl:e.target.value})} className="bg-transparent text-xs font-bold flex-grow outline-none" placeholder="Youtube URL" /></div>
                     <div className="flex gap-4 items-center bg-gray-50 p-4 border"><Linkedin className="text-[#0077B5]"/><input type="text" value={settings.linkedinUrl} onChange={e=>setSettings({...settings, linkedinUrl:e.target.value})} className="bg-transparent text-xs font-bold flex-grow outline-none" placeholder="Linkedin URL" /></div>
                  </div>
+              </section>
+            </div>
+          )}
+
+          {activeTab === 'backstage' && (
+            <div className="space-y-20">
+              <section>
+                <SectionTitle title="Backstage Galerie - Jak Pracuji" icon={Camera} />
+                <div className="space-y-6">
+                  <div className="bg-blue-50 border-2 border-blue-200 p-6 rounded">
+                    <div className="flex items-start gap-4">
+                      <Info className="text-blue-600 shrink-0 mt-1" size={20} />
+                      <div className="space-y-2">
+                        <p className="text-xs font-black uppercase text-blue-900 tracking-wider">Informace o sekci</p>
+                        <p className="text-xs text-blue-700 leading-relaxed">
+                          Zde můžete spravovat fotky pro stránku <strong>"Jak Pracuji"</strong> (/jak-pracuji). 
+                          Tyto obrázky zobrazují zákulisí vaší tvorby a proces práce.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center pt-6">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-gray-400">
+                      Počet fotek v galerii: {settings.backstage?.length || 0}
+                    </p>
+                    <button 
+                      onClick={() => {
+                        setPickerTarget({ key: 'backstage-add' });
+                        setShowPicker(true);
+                      }}
+                      className="bg-[#007BFF] text-white px-8 py-4 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all flex items-center gap-3"
+                    >
+                      <Plus size={16} /> Přidat fotku
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 pt-6">
+                    {(settings.backstage || []).map((url, index) => (
+                      <div key={index} className="relative aspect-square bg-gray-100 border group overflow-hidden">
+                        <img src={url} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all" alt={`Backstage ${index + 1}`} />
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center">
+                          <button
+                            onClick={() => {
+                              const newBackstage = settings.backstage?.filter((_, i) => i !== index);
+                              setSettings({ ...settings, backstage: newBackstage });
+                            }}
+                            className="bg-red-500 text-white p-3 rounded-sm hover:bg-red-600 transition-all"
+                          >
+                            <X size={20} />
+                          </button>
+                        </div>
+                        <div className="absolute top-2 right-2 bg-black/70 text-white text-[8px] font-black px-2 py-1 rounded">
+                          #{index + 1}
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {(!settings.backstage || settings.backstage.length === 0) && (
+                      <div className="col-span-full flex flex-col items-center justify-center py-20 text-gray-400">
+                        <ImageIcon size={48} className="mb-4 opacity-30" />
+                        <p className="text-xs font-black uppercase tracking-widest">Zatím žádné fotky</p>
+                        <p className="text-[10px] mt-2">Klikněte na tlačítko "Přidat fotku" výše</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </section>
             </div>
           )}

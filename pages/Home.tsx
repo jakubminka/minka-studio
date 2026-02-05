@@ -10,6 +10,7 @@ import { dataStore, projectDB } from '../lib/db';
 
 const Home: React.FC = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [currentReviewIndex, setCurrentReviewIndex] = useState(0);
   const [projects, setProjects] = useState<Project[]>([]);
   const [partners, setPartners] = useState<{id: string, name: string}[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -328,23 +329,80 @@ const Home: React.FC = () => {
             <span className="text-[#007BFF] font-black text-xs uppercase tracking-[0.7em] block mb-4">Reference</span>
             <h2 className="text-5xl md:text-7xl font-black uppercase tracking-tighter text-black">Zpětná vazba</h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {reviews.slice(0, 3).map((review) => (
-              <div key={review.id} className="bg-gray-50 p-10 border border-gray-100 relative group hover:border-[#007BFF] transition-all duration-500 shadow-sm">
-                <Quote className="absolute top-6 right-6 text-[#007BFF]/5 group-hover:text-[#007BFF]/10 transition-colors" size={48} />
-                <div className="flex gap-1 mb-8">
-                  {[...Array(review.rating)].map((_, i) => <Star key={i} size={14} fill="currentColor" className="text-[#007BFF]" />)}
-                </div>
-                <p className="text-gray-600 text-lg font-medium leading-relaxed mb-10 group-hover:text-black transition-colors">
-                  "{review.text}"
-                </p>
-                <div className="pt-8 border-t border-gray-200">
-                  <h4 className="font-black uppercase tracking-widest text-[11px] text-black">{review.author}</h4>
-                  <span className="text-[9px] font-bold text-[#007BFF] uppercase tracking-widest mt-1 block">Spolupracující klient</span>
-                </div>
+          
+          {reviews.length > 0 ? (
+            <div className="space-y-8">
+              {/* Carousel */}
+              <div className="relative">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={currentReviewIndex}
+                    initial={{ opacity: 0, x: 50 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -50 }}
+                    transition={{ duration: 0.5 }}
+                    className="bg-gray-50 p-10 md:p-16 border border-gray-100 relative group hover:border-[#007BFF] transition-all duration-500 shadow-sm min-h-[400px] flex flex-col justify-between"
+                  >
+                    <Quote className="absolute top-6 right-6 text-[#007BFF]/5 group-hover:text-[#007BFF]/10 transition-colors" size={48} />
+                    <div>
+                      <div className="flex gap-1 mb-8">
+                        {[...Array(reviews[currentReviewIndex].rating)].map((_, i) => <Star key={i} size={14} fill="currentColor" className="text-[#007BFF]" />)}
+                      </div>
+                      <p className="text-gray-600 text-xl font-medium leading-relaxed mb-10 group-hover:text-black transition-colors">
+                        "{reviews[currentReviewIndex].text}"
+                      </p>
+                    </div>
+                    <div className="pt-8 border-t border-gray-200">
+                      <h4 className="font-black uppercase tracking-widest text-[11px] text-black">{reviews[currentReviewIndex].author}</h4>
+                      <span className="text-[9px] font-bold text-[#007BFF] uppercase tracking-widest mt-1 block">{reviews[currentReviewIndex].platform === 'google' ? 'GOOGLE MAPS' : reviews[currentReviewIndex].platform === 'firmy' ? 'FIRMY.CZ' : 'OVĚŘENO'}</span>
+                    </div>
+                  </motion.div>
+                </AnimatePresence>
+
+                {/* Navigation Arrows */}
+                {reviews.length > 1 && (
+                  <>
+                    <button
+                      onClick={() => setCurrentReviewIndex((prev) => (prev - 1 + reviews.length) % reviews.length)}
+                      className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-16 md:-translate-x-20 w-12 h-12 flex items-center justify-center rounded-full bg-[#007BFF] text-white hover:bg-black transition-all shadow-lg"
+                    >
+                      <ArrowLeft size={20} />
+                    </button>
+                    <button
+                      onClick={() => setCurrentReviewIndex((prev) => (prev + 1) % reviews.length)}
+                      className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-16 md:translate-x-20 w-12 h-12 flex items-center justify-center rounded-full bg-[#007BFF] text-white hover:bg-black transition-all shadow-lg"
+                    >
+                      <ArrowRight size={20} />
+                    </button>
+                  </>
+                )}
               </div>
-            ))}
-          </div>
+
+              {/* Breadcrumbs */}
+              {reviews.length > 1 && (
+                <div className="flex justify-center flex-wrap gap-3">
+                  {reviews.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setCurrentReviewIndex(idx)}
+                      className={`px-4 py-2 text-[9px] font-black uppercase tracking-widest transition-all ${
+                        currentReviewIndex === idx
+                          ? 'bg-[#007BFF] text-white shadow-lg'
+                          : 'bg-gray-100 text-gray-400 hover:text-black'
+                      }`}
+                    >
+                      <span className="hidden sm:inline">{reviews[idx].author.split(' ')[0]}</span>
+                      <span className="sm:hidden">{idx + 1}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-20 text-gray-400">
+              <p className="text-lg font-medium">Zatím nejsou k dispozici žádné recenze</p>
+            </div>
+          )}
         </div>
       </section>
 

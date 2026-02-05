@@ -10,6 +10,7 @@ import BlogPostDetail from './pages/BlogPostDetail';
 import SpecializationDetail from './pages/SpecializationDetail';
 import ProjectDetail from './pages/ProjectDetail';
 import Contact from './pages/Contact';
+import Backstage from './pages/Backstage';
 import AdminDashboard from './pages/AdminDashboard';
 import NotFound from './pages/NotFound';
 import PrivacyPolicy from './pages/PrivacyPolicy';
@@ -72,6 +73,7 @@ const AppContent = () => {
           <Route path="/blog/:id" element={<BlogPostDetail />} />
           <Route path="/specializace/:id" element={<SpecializationDetail />} />
           <Route path="/projekt/:id" element={<ProjectDetail />} />
+          <Route path="/jak-pracuji" element={<Backstage />} />
           <Route path="/kontakt" element={<Contact />} />
           <Route path="/ochrana-soukromi" element={<PrivacyPolicy />} />
           <Route path="/podminky-spoluprace" element={<TermsOfService />} />
