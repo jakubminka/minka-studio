@@ -7,6 +7,7 @@ import MasonryGrid from '../components/MasonryGrid';
 import { motion } from 'framer-motion';
 import { dataStore, projectDB } from '../lib/db';
 import { WebSettings } from '../types';
+import SEO from '../components/SEO';
 
 const SpecializationDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -54,6 +55,12 @@ const SpecializationDetail: React.FC = () => {
 
   return (
     <div className="w-full">
+            <SEO 
+              title={spec.seoTitle || `${spec.name} | Jakub Minka`}
+              description={spec.seoDescription || spec.description}
+              keywords={spec.seoKeywords || spec.name}
+              ogImage={headerUrl || spec.image}
+            />
       {/* Detail Header */}
       <header className="relative h-[70vh] bg-black text-white flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 bg-black/60 z-10"></div>

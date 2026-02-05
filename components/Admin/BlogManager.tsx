@@ -58,9 +58,11 @@ const BlogManager: React.FC = () => {
     } else if (editorRef.current) {
       editorRef.current.focus();
       const html = item.type === 'video' 
-        ? `<div class="my-8 aspect-video w-full"><video src="${item.url}" controls class="w-full h-full object-cover"></video></div><p><br></p>`
-        : `<img src="${item.url}" class="w-full my-8 shadow-lg border border-gray-100" /><p><br></p>`;
+        ? `<div class="my-8 w-full max-w-3xl mx-auto"><video src="${item.url}" controls class="w-full shadow-2xl rounded-sm"></video></div>`
+        : `<img src="${item.url}" alt="" class="w-full max-w-3xl mx-auto my-8 shadow-2xl border border-gray-100 rounded-sm block" />`;
       document.execCommand('insertHTML', false, html);
+      // Add a line break after
+      document.execCommand('insertHTML', false, '<p><br></p>');
     }
     setShowPicker(false);
   };
@@ -135,6 +137,47 @@ const BlogManager: React.FC = () => {
                         )}
                      </div>
                      <input type="date" value={formData.date?.split('T')[0]} onChange={e=>setFormData({...formData, date:e.target.value})} className={inputClass} />
+                     
+                     {/* SEO Section */}
+                     <div className="border-t pt-8 space-y-6">
+                        <h3 className="text-[10px] font-black uppercase text-gray-400 tracking-widest flex items-center gap-2">
+                           <Search size={14}/> SEO Nastavení
+                        </h3>
+                        <div className="space-y-4">
+                           <label className="text-[9px] font-bold uppercase text-gray-500">SEO Titulek (max 60 znaků)</label>
+                           <input 
+                              type="text" 
+                              value={formData.seoTitle || ''} 
+                              onChange={e=>setFormData({...formData, seoTitle:e.target.value})} 
+                              className={inputClass}
+                              placeholder="Vlastní titulek pro Google (volitelné)"
+                              maxLength={60}
+                           />
+                           <div className="text-xs text-gray-400">{(formData.seoTitle || '').length}/60</div>
+                        </div>
+                        <div className="space-y-4">
+                           <label className="text-[9px] font-bold uppercase text-gray-500">SEO Popis (max 160 znaků)</label>
+                           <textarea 
+                              value={formData.seoDescription || ''} 
+                              onChange={e=>setFormData({...formData, seoDescription:e.target.value})} 
+                              className={`${inputClass} h-20 resize-none`}
+                              placeholder="Vlastní popis pro Google (volitelné)"
+                              maxLength={160}
+                           />
+                           <div className="text-xs text-gray-400">{(formData.seoDescription || '').length}/160</div>
+                        </div>
+                        <div className="space-y-4">
+                           <label className="text-[9px] font-bold uppercase text-gray-500">SEO Klíčová slova</label>
+                           <input 
+                              type="text" 
+                              value={formData.seoKeywords || ''} 
+                              onChange={e=>setFormData({...formData, seoKeywords:e.target.value})} 
+                              className={inputClass}
+                              placeholder="slovo1, slovo2, slovo3"
+                           />
+                        </div>
+                     </div>
+                     
                      <button type="submit" disabled={isProcessing} className="w-full bg-[#007BFF] text-white py-6 text-[11px] font-black uppercase tracking-[0.4em] hover:bg-black transition-all shadow-xl">
                         {isProcessing ? <RefreshCw className="animate-spin inline mr-2"/> : 'PUBLIKOVAT ČLÁNEK'}
                      </button>

@@ -1,10 +1,11 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { BlogPost } from '../types';
 import { motion } from 'framer-motion';
 import { Calendar, User, ArrowLeft, Clock } from 'lucide-react';
 import { blogDB } from '../lib/db';
+import SEO from '../components/SEO';
 
 const BlogPostDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -26,10 +27,51 @@ const BlogPostDetail: React.FC = () => {
     load();
   }, [id, navigate]);
 
+  // Process content to convert standalone image URLs to img tags
+  const processedContent = useMemo(() => {
+    if (!post?.content) return '';
+    
+    let content = post.content;
+
+    // First, handle markdown image syntax: ![alt text](url)
+    content = content.replace(
+      /!\[([^\]]*)\]\((https?:\/\/[^\s)]+?\.(?:webp|jpg|jpeg|png|gif))\)/gi,
+      (match, alt, url) => {
+        const caption = alt.trim();
+        if (caption) {
+          return `<figure class="my-12"><img src="${url}" alt="${caption}" class="w-full max-w-3xl mx-auto shadow-2xl border border-gray-100 rounded-sm block" /><figcaption class="text-center text-gray-400 text-xs mt-3 font-medium">${caption}</figcaption></figure>`;
+        }
+        return `<img src="${url}" alt="" class="w-full max-w-3xl mx-auto my-8 shadow-2xl border border-gray-100 rounded-sm block" />`;
+      }
+    );
+
+    // Then handle standalone image URLs (not already in tags)
+    const parts = content.split(/(<[^>]+>)/g);
+    const processed = parts.map(part => {
+      if (part.startsWith('<')) {
+        return part;
+      }
+      
+      return part.replace(
+        /https?:\/\/[^\s<>"]+?\.(?:webp|jpg|jpeg|png|gif)/gi,
+        (url) => `<img src="${url}" alt="" class="w-full max-w-3xl mx-auto my-8 shadow-2xl border border-gray-100 rounded-sm block" />`
+      );
+    });
+
+    return processed.join('');
+  }, [post?.content]);
+
   if (!post) return null;
 
   return (
     <article className="min-h-screen bg-white">
+      <SEO 
+        title={post.seoTitle || `${post.title} | Blog Jakub Minka`}
+        description={post.seoDescription || post.excerpt}
+        keywords={post.seoKeywords || post.tags.join(', ')}
+        ogImage={post.coverImage}
+        ogType="article"
+      />
       {/* Post Hero */}
       <div className="relative h-[70vh] flex items-center justify-center overflow-hidden bg-black">
         <div className="absolute inset-0 bg-black/60 z-10"></div>
@@ -71,12 +113,12 @@ const BlogPostDetail: React.FC = () => {
           className="prose prose-lg max-w-none text-gray-700 font-medium leading-relaxed
                      prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tighter prose-headings:text-black
                      prose-p:mb-8 prose-p:leading-relaxed
-                     prose-img:shadow-2xl prose-img:border prose-img:border-gray-100 prose-img:rounded-sm prose-img:mx-auto prose-img:w-full prose-img:my-8
-                     prose-video:w-full prose-video:my-8 prose-video:shadow-2xl
                      prose-strong:text-black prose-strong:font-black
                      prose-a:text-[#007BFF] prose-a:no-underline hover:prose-a:underline
-                     prose-ul:list-disc prose-li:mb-2"
-          dangerouslySetInnerHTML={{ __html: post.content }}
+                     prose-ul:list-disc prose-li:mb-2
+                     [&_img]:w-full [&_img]:max-w-3xl [&_img]:mx-auto [&_img]:my-8 [&_img]:shadow-2xl [&_img]:border [&_img]:border-gray-100 [&_img]:rounded-sm [&_img]:block
+                     [&_video]:w-full [&_video]:max-w-3xl [&_video]:mx-auto [&_video]:my-8 [&_video]:shadow-2xl [&_video]:rounded-sm [&_video]:block"
+          dangerouslySetInnerHTML={{ __html: processedContent }}
         />
         
         <div className="mt-24 pt-12 border-t border-gray-100 flex flex-col md:flex-row items-center justify-between gap-12">

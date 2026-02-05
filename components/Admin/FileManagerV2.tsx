@@ -42,6 +42,8 @@ const FileManagerV2: React.FC = () => {
   const [isQueueMinimized, setIsQueueMinimized] = useState(false);
   const [editingItem, setEditingItem] = useState<FileItem | null>(null);
   const [editName, setEditName] = useState('');
+  const [editAlt, setEditAlt] = useState('');
+  const [editDescription, setEditDescription] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [showMetadataEditor, setShowMetadataEditor] = useState<FileItem | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -324,20 +326,26 @@ const FileManagerV2: React.FC = () => {
     setDraggedItem(null);
   };
 
-  const handleRename = async (id: string, newName: string) => {
+  const handleRename = async (id: string, newName: string, alt?: string, description?: string) => {
     if (!newName.trim()) return;
     
     const item = items.find(i => i.id === id);
     if (!item) return;
 
     try {
-      await mediaDB.update(id, { name: newName });
+      const updates: Partial<FileItem> = { name: newName };
+      if (alt !== undefined) updates.alt = alt;
+      if (description !== undefined) updates.description = description;
+      
+      await mediaDB.update(id, updates);
       setEditingItem(null);
       setEditName('');
+      setEditAlt('');
+      setEditDescription('');
       loadFiles();
     } catch (err) {
-      console.error('Rename error:', err);
-      alert('Chyba při přejmenování');
+      console.error('Update error:', err);
+      alert('Chyba při ukládání');
     }
   };
 
@@ -829,7 +837,12 @@ const FileManagerV2: React.FC = () => {
                             <Eye size={14} />
                           </button>
                           <button 
-                            onClick={() => setShowMetadataEditor(item)}
+                            onClick={() => {
+                              setShowMetadataEditor(item);
+                              setEditName(item.name);
+                              setEditAlt(item.alt || '');
+                              setEditDescription(item.description || '');
+                            }}
                             className="p-1 hover:text-[#007BFF]"
                             title="Metadata"
                           >
@@ -1081,11 +1094,34 @@ const FileManagerV2: React.FC = () => {
                   </div>
                 </div>
 
+                {/* ALT Text */}
+                <div>
+                  <label className="block text-gray-600 mb-2">ALT text (popis obrázku pro SEO)</label>
+                  <input 
+                    type="text" 
+                    value={editAlt}
+                    onChange={(e) => setEditAlt(e.target.value)}
+                    placeholder="Krátký popis obrázku pro vyhledávače a čtečky..."
+                    className="w-full px-4 py-2 border border-gray-200 rounded focus:outline-none focus:border-[#007BFF] text-[10px]"
+                  />
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="block text-gray-600 mb-2">Popis / poznámky</label>
+                  <textarea 
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    placeholder="Volitelný delší popis nebo poznámky k souboru..."
+                    className="w-full px-4 py-2 border border-gray-200 rounded focus:outline-none focus:border-[#007BFF] text-[10px] min-h-[80px]"
+                  />
+                </div>
+
                 {/* Actions */}
                 <div className="flex gap-3 pt-4 border-t border-gray-200">
                   <button 
                     onClick={() => {
-                      handleRename(showMetadataEditor.id, editName);
+                      handleRename(showMetadataEditor.id, editName, editAlt, editDescription);
                       setShowMetadataEditor(null);
                     }}
                     className="flex-1 bg-[#007BFF] text-white px-4 py-3 rounded hover:bg-blue-700 transition-all text-[10px] font-black"

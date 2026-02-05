@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom';
 import MasonryGrid from '../components/MasonryGrid';
 import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion';
 import { dataStore, projectDB } from '../lib/db';
+import SEO from '../components/SEO';
 
 const Home: React.FC = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -146,6 +147,12 @@ const Home: React.FC = () => {
 
   return (
     <div className="w-full overflow-hidden bg-white">
+      <SEO 
+        title={settings.siteTitle || 'Jakub Minka - Profesionální Fotograf & Kameraman'}
+        description={settings.siteDescription || 'Profesionální fotografie a video produkce pro firmy. Komerční tvorba, architektura, průmysl.'}
+        keywords={settings.siteKeywords || 'fotograf praha, komerční fotografie, firemní video'}
+        ogImage={settings.homeHeader || settings.portfolioHeader}
+      />
       {/* 1. HERO SECTION */}
       <section 
         className={`relative h-[90vh] w-full overflow-hidden bg-[#0A192F] text-white ${hoverSide ? 'cursor-none' : 'cursor-default'}`}

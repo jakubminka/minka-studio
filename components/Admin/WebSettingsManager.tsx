@@ -35,7 +35,7 @@ const WebSettingsManager: React.FC = () => {
     termsContent: ''
   });
 
-  const [activeTab, setActiveTab] = useState<'home' | 'portfolio' | 'specs' | 'contact' | 'backstage' | 'footer' | 'legal'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'portfolio' | 'specs' | 'contact' | 'backstage' | 'footer' | 'legal' | 'seo'>('home');
   const [showPicker, setShowPicker] = useState(false);
   const [pickerTarget, setPickerTarget] = useState<{key: string, isSpec?: boolean} | null>(null);
   const [allItems, setAllItems] = useState<FileItem[]>([]);
@@ -145,6 +145,7 @@ const WebSettingsManager: React.FC = () => {
       {/* Visual Navigation Tabs */}
       <div className="flex bg-white border p-1 sticky top-0 z-[100] shadow-xl overflow-x-auto no-scrollbar">
         {[
+          { id: 'seo', label: 'SEO', icon: Search },
           { id: 'home', label: 'Úvodní stránka', icon: Layout },
           { id: 'portfolio', label: 'Portfolio', icon: Layers },
           { id: 'specs', label: 'Specializace', icon: Camera },
@@ -171,6 +172,85 @@ const WebSettingsManager: React.FC = () => {
           exit={{ opacity: 0, y: -20 }}
           className="bg-white p-10 lg:p-16 border shadow-sm space-y-20 max-w-6xl mx-auto"
         >
+          {activeTab === 'seo' && (
+            <div className="space-y-20">
+              <section>
+                <SectionTitle title="Globální SEO nastavení" icon={Search} />
+                <div className="space-y-8 bg-blue-50/30 p-8 border border-blue-100 rounded-sm">
+                  <div className="text-sm text-gray-600 mb-6 leading-relaxed">
+                    <strong className="text-black">SEO (Search Engine Optimization)</strong> pomáhá vašim stránkám umístit se výše ve vyhledávání Google. 
+                    Vyplňte následující pole s relevantními informacemi.
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <label className="text-[10px] font-black uppercase text-gray-400">
+                      Název webu (Site Title) 
+                      <span className="text-[#007BFF] ml-2">📊 Důležité pro Google</span>
+                    </label>
+                    <input 
+                      type="text" 
+                      value={settings.siteTitle || ''} 
+                      onChange={e=>setSettings({...settings, siteTitle:e.target.value})} 
+                      className={inputClass} 
+                      placeholder="např. Jakub Minka - Profesionální Fotograf & Kameraman Praha"
+                      maxLength={60}
+                    />
+                    <div className="text-xs text-gray-500">
+                      {(settings.siteTitle || '').length}/60 znaků • Zobrazuje se v záložce prohlížeče a ve výsledcích vyhledávání
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <label className="text-[10px] font-black uppercase text-gray-400">
+                      Popis webu (Meta Description)
+                      <span className="text-[#007BFF] ml-2">📊 Důležité pro Google</span>
+                    </label>
+                    <textarea 
+                      value={settings.siteDescription || ''} 
+                      onChange={e=>setSettings({...settings, siteDescription:e.target.value})} 
+                      className={`${inputClass} h-24 resize-none`}
+                      placeholder="např. Profesionální fotografie a video produkce pro firmy. Komerční tvorba, architektura, průmysl. +420 XXX XXX XXX"
+                      maxLength={160}
+                    />
+                    <div className="text-xs text-gray-500">
+                      {(settings.siteDescription || '').length}/160 znaků • Zobrazuje se pod názvem ve výsledcích Google
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <label className="text-[10px] font-black uppercase text-gray-400">
+                      Klíčová slova (Keywords)
+                      <span className="text-gray-400 ml-2">💡 Méně důležité, ale užitečné</span>
+                    </label>
+                    <input 
+                      type="text" 
+                      value={settings.siteKeywords || ''} 
+                      onChange={e=>setSettings({...settings, siteKeywords:e.target.value})} 
+                      className={inputClass}
+                      placeholder="např. fotograf praha, komerční fotografie, firemní video, průmyslová fotografie"
+                    />
+                    <div className="text-xs text-gray-500">
+                      Oddělujte čárkami • Používejte specifické fráze které lidé hledají
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-12 p-6 bg-yellow-50 border border-yellow-200 rounded-sm">
+                  <h4 className="font-black uppercase text-xs mb-3 flex items-center gap-2">
+                    <Info size={16} /> SEO Tips pro lepší umístění
+                  </h4>
+                  <ul className="text-sm space-y-2 text-gray-700">
+                    <li className="flex gap-2"><span>✓</span> <span>Používejte konkrétní lokaci (Praha, Brno...)</span></li>
+                    <li className="flex gap-2"><span>✓</span> <span>Zahrňte vaši specializaci (komerční, průmyslová...)</span></li>
+                    <li className="flex gap-2"><span>✓</span> <span>Každá stránka (blog, specializace) má vlastní SEO nastavení</span></li>
+                    <li className="flex gap-2"><span>✓</span> <span>Obrázky pojmenovávejte smysluplně (ne IMG_1234.jpg)</span></li>
+                    <li className="flex gap-2"><span>✓</span> <span>Vyplňte ALT text u všech obrázků v Media Gallery</span></li>
+                  </ul>
+                </div>
+              </section>
+            </div>
+          )}
+
           {activeTab === 'home' && (
             <div className="space-y-20">
               <section>

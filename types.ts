@@ -56,6 +56,10 @@ export interface BlogPost {
   date: string;
   author: string;
   tags: string[];
+  // SEO
+  seoTitle?: string;
+  seoDescription?: string;
+  seoKeywords?: string;
 }
 
 export interface Specialization {
@@ -66,9 +70,18 @@ export interface Specialization {
   caseStudies: string[];
   values: string[];
   externalUrl?: string;
+  // SEO
+  seoTitle?: string;
+  seoDescription?: string;
+  seoKeywords?: string;
 }
 
 export interface WebSettings {
+  // SEO - Global
+  siteTitle?: string;
+  siteDescription?: string;
+  siteKeywords?: string;
+  
   // Page Headers
   homeHeader: string;
   portfolioHeader: string;
