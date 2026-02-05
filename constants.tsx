@@ -179,21 +179,5 @@ export const PROJECTS: Project[] = Array.from({ length: 40 }).map((_, i) => {
   };
 });
 
-export const REVIEWS: Review[] = [
-  {
-    id: '1',
-    author: 'Martin Dvořák',
-    text: 'Jakub pro nás točil produktové video a výsledek předčil naše očekávání. Profesionální přístup od přípravy až po finální střih. Rozhodně doporučuji.',
-    rating: 5,
-    platform: 'google',
-    date: 'před 2 měsíci'
-  },
-  {
-    id: '2',
-    author: 'Petra Svobodová',
-    text: 'Skvělá spolupráce na focení interiérů našeho nového hotelu. Jakub má cit pro detail a dokáže skvěle pracovat se světlem.',
-    rating: 5,
-    platform: 'firmy',
-    date: 'před 1 měsícem'
-  }
-];
+export const REVIEWS: Review[] = [];
+

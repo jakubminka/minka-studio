@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { ArrowLeft, ArrowRight, Wallet, Zap, Info, ArrowUpRight, MessageSquare, ExternalLink, Star, Quote } from 'lucide-react';
-import { PROJECTS as DEFAULT_PROJECTS, SPECIALIZATIONS, REVIEWS as DEFAULT_REVIEWS } from '../constants';
+import { PROJECTS as DEFAULT_PROJECTS, SPECIALIZATIONS } from '../constants';
 import { Project, WebSettings, Review } from '../types';
 import { Link } from 'react-router-dom';
 import MasonryGrid from '../components/MasonryGrid';
@@ -74,9 +74,9 @@ const Home: React.FC = () => {
         console.log('📖 Loaded reviews:', savedReviews.length);
         setReviews(savedReviews.map(mapReviewFromDb));
       } else {
-        // Use default reviews as fallback
-        console.log('⚠️ No reviews found, using defaults');
-        setReviews(DEFAULT_REVIEWS);
+        // Žádné recenze
+        console.log('⚠️ No reviews found');
+        setReviews([]);
       }
       
       setIsDataLoaded(true);

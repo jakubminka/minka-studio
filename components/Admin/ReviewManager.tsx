@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { Review } from '../../types';
-import { REVIEWS as INITIAL_REVIEWS } from '../../constants';
 import { 
   Star, 
   Plus, 
@@ -11,7 +10,6 @@ import {
   X, 
   ExternalLink,
   Search,
-  CheckCircle2,
   MessageSquare,
   AlertCircle
 } from 'lucide-react';
@@ -34,24 +32,63 @@ const ReviewManager: React.FC = () => {
   });
 
   const mapFromDb = (item: any): Review => {
+    // Format date for display
+    let displayDate = '';
+    if (item.date) {
+      try {
+        const date = new Date(item.date);
+        const now = new Date();
+        const diffMs = now.getTime() - date.getTime();
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        
+        if (diffDays === 0) displayDate = 'dnes';
+        else if (diffDays === 1) displayDate = 'včera';
+        else if (diffDays < 7) displayDate = `před ${diffDays} dny`;
+        else if (diffDays < 30) displayDate = `před ${Math.floor(diffDays / 7)} týdny`;
+        else if (diffDays < 365) displayDate = `před ${Math.floor(diffDays / 30)} měsíci`;
+        else displayDate = `před ${Math.floor(diffDays / 365)} lety`;
+      } catch {
+        displayDate = item.date || '';
+      }
+    }
+    
     return {
       id: item.id,
       author: item.author || 'Anonymní klient',
       text: item.text || item.content || '',
       rating: typeof item.rating === 'number' ? item.rating : 5,
       platform: item.platform || item.company || 'manual',
-      date: item.date || ''
+      date: displayDate
     } as Review;
   };
 
   const mapToDb = (review: Review) => {
+    // Convert date to ISO string or null for database
+    let dateValue = null;
+    if (review.date) {
+      try {
+        // Try to parse as date, if fails, use current date
+        const parsedDate = new Date(review.date);
+        if (!isNaN(parsedDate.getTime())) {
+          dateValue = parsedDate.toISOString();
+        } else {
+          dateValue = new Date().toISOString();
+        }
+      } catch {
+        dateValue = new Date().toISOString();
+      }
+    }
+    
+    const now = new Date().toISOString();
     return {
       id: review.id,
       author: review.author,
       content: review.text,
       rating: review.rating,
       company: review.platform,
-      date: review.date
+      date: dateValue,
+      created_at: now,
+      updated_at: now
     };
   };
 
@@ -77,28 +114,31 @@ const ReviewManager: React.FC = () => {
     }
   };
 
-  const loadDefaultReviews = async () => {
-    if (confirm('Načíst výchozí recenze? (Přidá 2 ukázkové recenze)')) {
-      for (const review of INITIAL_REVIEWS) {
-        await dataStore.collection('reviews').save(mapToDb(review));
-      }
-      await loadData();
-    }
-  };
-
   useEffect(() => { loadData(); }, []);
 
   const saveReview = async (review: Review) => {
     try {
       const dbReview = mapToDb(review);
       console.log('💾 Saving review:', dbReview);
+      
+      // Clear cache before saving to ensure fresh load
+      localStorage.removeItem('jakub_minka_cache_reviews');
+      localStorage.removeItem('jakub_minka_cache_reviews_ts');
+      
       await dataStore.collection('reviews').save(dbReview);
-      console.log('✅ Review saved, reloading...');
+      console.log('✅ Review saved successfully');
+      
+      // Wait a bit for Supabase to process
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       await loadData();
+      console.log('📖 Data reloaded');
+      
       // Force storage event to update Home page
       window.dispatchEvent(new Event('storage'));
     } catch (error) {
       console.error('❌ Error saving review:', error);
+      alert(`Chyba při ukládání recenze: ${error}`);
       throw error;
     }
   };
@@ -121,12 +161,12 @@ const ReviewManager: React.FC = () => {
     e.preventDefault();
     try {
       const newReview: Review = {
-        id: Math.random().toString(36).substr(2, 9),
+        id: `review_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
         author: formData.author || 'Anonymní klient',
         text: formData.text || '',
         rating: formData.rating || 5,
         platform: formData.platform as any || 'manual',
-        date: formData.date || new Date().toLocaleDateString('cs-CZ', { year: 'numeric', month: 'long' })
+        date: new Date().toISOString()
       };
 
       await saveReview(newReview);
@@ -175,14 +215,6 @@ const ReviewManager: React.FC = () => {
           >
             <Plus size={16} /> Přidat recenzi
           </button>
-          {reviews.length === 0 && (
-            <button 
-              onClick={loadDefaultReviews}
-              className="bg-gray-600 text-white px-8 py-3.5 text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-gray-800 transition-all"
-            >
-              <CheckCircle2 size={16} /> Načíst výchozí
-            </button>
-          )}
           <div className="relative">
             <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
             <input 
