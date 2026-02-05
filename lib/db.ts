@@ -413,7 +413,7 @@ export class ProjectDB {
 
   // Convert camelCase to snake_case for database
   private toSnakeCase(item: any) {
-    const result: any = {
+    return {
       id: item.id,
       title: item.title,
       short_description: item.shortDescription,
@@ -429,14 +429,7 @@ export class ProjectDB {
       updated_at: new Date().toISOString(),
       created_at: item.created_at || new Date().toISOString()
     };
-    
-    // Only add youtube_url if it exists (to avoid schema cache errors)
-    if (item.youtubeUrl !== undefined) {
-      result.youtube_url = item.youtubeUrl;
-    }
-    
-    return result;
-  };
+  }
 
   // Convert snake_case from database to camelCase for frontend
   private toCamelCase(item: any) {

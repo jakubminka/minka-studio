@@ -110,24 +110,22 @@ const ProjectManagerV2: React.FC = () => {
   const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files?.length) return;
     const files = Array.from(e.target.files) as File[];
-    setIsProcessing(true);
-    const quality = parseFloat(localStorage.getItem('jakub_minka_compression_quality') || '0.8');
-
-    // Load existing media to check for duplicates
+    
+    // Load existing media to check for duplicates BEFORE starting
     const existingMediaItems = await mediaDB.getAll();
-
+    const duplicates: string[] = [];
+    const filesToUpload: File[] = [];
+    
     for (const file of files) {
-      const uploadId = Math.random().toString(36).substr(2, 9);
       const fileBaseName = file.name.split('.')[0];
-      
-      // Check if file with same name already exists
       const existingByName = existingMediaItems.find(item => 
         item.name === fileBaseName && item.type === 'image'
       );
       
       if (existingByName) {
-        // Reuse existing image
-        console.log('🔄 Gallery image already exists, reusing:', existingByName.name);
+        duplicates.push(file.name);
+        // Reuse existing image immediately
+        const uploadId = Math.random().toString(36).substr(2, 9);
         const galleryItem: GalleryItem = {
           id: 'g-' + uploadId,
           url: existingByName.url,
@@ -138,8 +136,27 @@ const ProjectManagerV2: React.FC = () => {
           ...p,
           gallery: [...(p.gallery || []), galleryItem]
         }));
-        continue;
+      } else {
+        filesToUpload.push(file);
       }
+    }
+    
+    // Show warning if duplicates found
+    if (duplicates.length > 0) {
+      alert(`⚠️ Následující soubory již existují v galerii a budou znovu použity:\n${duplicates.join('\n')}`);
+    }
+    
+    // If no new files to upload, we're done
+    if (filesToUpload.length === 0) {
+      return;
+    }
+    
+    setIsProcessing(true);
+    const quality = parseFloat(localStorage.getItem('jakub_minka_compression_quality') || '0.8');
+
+    for (const file of filesToUpload) {
+      const uploadId = Math.random().toString(36).substr(2, 9);
+      const fileBaseName = file.name.split('.')[0];
       
       setUploads(prev => [...prev, { id: uploadId, name: file.name, progress: 0 }]);
 
@@ -147,7 +164,7 @@ const ProjectManagerV2: React.FC = () => {
         const webpBlob = await convertToWebP(file, quality);
         const url = await uploadFileToStorage(webpBlob, file.name);
 
-        // Add to media gallery (we already checked it doesn't exist)
+        // Add to media gallery
         const mediaItem: FileItem = {
           id: 'm-' + uploadId,
           name: fileBaseName,
@@ -279,7 +296,7 @@ const ProjectManagerV2: React.FC = () => {
         thumbnailSource: 'storage',
         gallery: formData.gallery || [],
         servicesDelivered: formData.servicesDelivered || '',
-        youtubeUrl: youtubeUrlsJson
+        youtubeUrl: youtubeUrlsJson  // Store as JSON string in gallery metadata or description
       };
 
       await projectDB.save(project);
