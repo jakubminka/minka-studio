@@ -6,6 +6,17 @@ import {
 import { 
   getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+import { supabase } from '../supabaseClient';
+
+// Tato funkce opraví tu hlášku v Dashboardu
+export const checkFirestoreConnection = async () => {
+  try {
+    const { data, error } = await supabase.from('portfolio').select('id').limit(1);
+    return !error;
+  } catch {
+    return false;
+  }
+};
 
 // POZNÁMKA: Pokud nahrávání nefunguje, zkontrolujte konzoli (F12). 
 // Pravděpodobně je to způsobeno neplatným API klíčem nebo neaktivním API v Google Console.
