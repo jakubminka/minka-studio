@@ -191,6 +191,21 @@ export class MediaDB {
     };
   }
 
+  // Convert snake_case from database to camelCase for frontend
+  private toCamelCase(item: any) {
+    return {
+      id: item.id,
+      name: item.name,
+      type: item.type,
+      size: item.size,
+      url: item.url,
+      parentId: item.parent_id || null,
+      specializationId: item.specialization_id,
+      updated_at: item.updated_at,
+      created_at: item.created_at
+    };
+  }
+
   async getAll(): Promise<any[]> {
     try {
       const { data, error } = await supabase
@@ -199,7 +214,7 @@ export class MediaDB {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      const items = data || [];
+      const items = (data || []).map(item => this.toCamelCase(item));
       localStorage.setItem(this.cacheKey, JSON.stringify(items));
       return items;
     } catch (e) {
@@ -267,14 +282,17 @@ export class MediaDB {
         throw new Error(`Supabase update failed: ${error.message}`);
       }
       
-      console.log('✅ Update successful for id:', id, 'Response:', response);
+      console.log('✅ Update successful for id:', id, 'Raw response:', response);
+      
+      // Convert response to camelCase
+      const camelCaseResponse = response ? response.map((item: any) => this.toCamelCase(item)) : [];
       
       // Only update localStorage AFTER confirming database update
       const current = JSON.parse(localStorage.getItem(this.cacheKey) || '[]');
-      localStorage.setItem(this.cacheKey, JSON.stringify(current.map((i: any) => i.id === id ? { ...i, ...data } : i)));
+      localStorage.setItem(this.cacheKey, JSON.stringify(current.map((i: any) => i.id === id ? camelCaseResponse[0] || i : i)));
       
       window.dispatchEvent(new Event('storage'));
-      return response;
+      return camelCaseResponse[0] || { id, ...data };
     } catch (e: any) {
       console.error("❌ Media update error:", e);
       throw e;

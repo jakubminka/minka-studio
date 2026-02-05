@@ -72,10 +72,11 @@ const FileManagerV2: React.FC = () => {
     const quality = parseFloat(localStorage.getItem('jakub_minka_compression_quality') || '0.8');
     const fileList = Array.from(files) as File[];
     
-    console.log('📤 Upload started:', { 
+    console.log('📤 [UPLOAD] Started:', { 
       filesCount: fileList.length, 
       currentFolderId, 
-      currentFolderName: currentFolderId ? items.find(i => i.id === currentFolderId)?.name : 'kořen'
+      currentFolderName: currentFolderId ? items.find(i => i.id === currentFolderId)?.name : 'kořen',
+      itemsInDB: items.length
     });
     
     for (const file of fileList) {
@@ -142,15 +143,29 @@ const FileManagerV2: React.FC = () => {
           updatedAt: new Date().toISOString()
         };
 
-        console.log('💾 Saving item to database:', { 
+        console.log('💾 [UPLOAD] Saving to database:', { 
           name: newItem.name, 
           parentId: newItem.parentId,
           folderName: newItem.parentId ? items.find(i => i.id === newItem.parentId)?.name : 'kořen'
         });
 
+        // Save and verify
         await mediaDB.save(newItem);
+        
+        // Verify it was saved with correct parentId
+        const savedItem = (await mediaDB.getAll()).find(i => i.id === newItem.id);
+        console.log('✅ [UPLOAD] File saved, verified in DB:', { 
+          name: savedItem?.name, 
+          savedParentId: savedItem?.parentId,
+          expectedParentId: newItem.parentId,
+          match: savedItem?.parentId === newItem.parentId
+        });
+        
         setUploadQueue(prev => prev.map(u => u.id === uploadId ? { ...u, status: 'completed', progress: 100 } : u));
-        loadFiles();
+        
+        // Reload and verify
+        console.log('[UPLOAD] Reloading files after save...');
+        await loadFiles();
       } catch (err: any) {
         setUploadQueue(prev => prev.map(u => u.id === uploadId ? { ...u, status: 'error', error: err.message || 'Upload failed' } : u));
       }
@@ -278,24 +293,33 @@ const FileManagerV2: React.FC = () => {
   };
 
   const handleMoveToFolder = async (itemId: string, targetFolderId: string | null) => {
-    console.log('🔄 Starting move:', { itemId, targetFolderId, timestamp: new Date().toISOString() });
+    console.log('🔄 [MOVE] Starting move:', { itemId, targetFolderId, timestamp: new Date().toISOString() });
     
     try {
       const moveItem = items.find(i => i.id === itemId);
       if (!moveItem) {
-        console.error('❌ Item not found in current items:', itemId);
+        console.error('❌ [MOVE] Item not found in current items:', itemId);
         throw new Error('Item not found');
       }
       
-      console.log('📦 Item to move:', moveItem.name, 'Current parentId:', moveItem.parentId, 'Target parentId:', targetFolderId);
+      console.log('📦 [MOVE] Item to move:', { name: moveItem.name, currentParentId: moveItem.parentId, targetParentId: targetFolderId });
       
       // Update in database
+      console.log('💾 [MOVE] Updating database with parentId =', targetFolderId);
       const result = await mediaDB.update(itemId, { parentId: targetFolderId });
-      console.log('✅ Database update response:', { success: !!result, data: result });
+      console.log('✅ [MOVE] Database update response:', result);
       
-      if (!result) {
-        throw new Error('Database update failed - no response');
+      if (!result || !result.id) {
+        throw new Error('Database update failed - no valid response');
       }
+      
+      // Verify the update in database
+      console.log('🔍 [MOVE] Verifying DB update...');
+      const verifyItem = await mediaDB.getAll().then(items => items.find(i => i.id === itemId));
+      if (!verifyItem) {
+        throw new Error('Item disappeared from database after move');
+      }
+      console.log('✅ [MOVE] Verified in DB:', { name: verifyItem.name, parentId: verifyItem.parentId });
       
       // Close modal immediately
       setMoveToFolderId(null);
@@ -303,8 +327,10 @@ const FileManagerV2: React.FC = () => {
       setDragOverId(null);
       
       // Reload files from database
+      console.log('🔄 [MOVE] Reloading all items from database...');
       const refreshedFiles = await mediaDB.getAll();
-      console.log('🔄 Refreshed files from database:', refreshedFiles.length, 'items');
+      const refreshedItem = refreshedFiles.find(i => i.id === itemId);
+      console.log('🔄 [MOVE] Reloaded complete:', { totalItems: refreshedFiles.length, movedItemParentId: refreshedItem?.parentId });
       
       setItems(refreshedFiles.map(i => ({
         ...i,
@@ -313,17 +339,17 @@ const FileManagerV2: React.FC = () => {
       
       // Show success message
       const targetName = targetFolderId
-        ? items.find(i => i.id === targetFolderId)?.name || 'složka'
+        ? refreshedFiles.find(i => i.id === targetFolderId)?.name || 'složka'
         : 'kořen';
-      console.log('✅ Move completed:', moveItem.name, '→', targetName);
+      console.log('✅ [MOVE] Move completed successfully:', { from: moveItem.name, to: targetName });
       alert(`✓ "${moveItem.name}" přesunuto do "${targetName}"`);
       
     } catch (err) {
-      console.error('❌ Move failed with error:', {
+      console.error('❌ [MOVE] Move failed:', {
         error: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
         itemId,
-        targetFolderId,
-        timestamp: new Date().toISOString()
+        targetFolderId
       });
       setMoveToFolderId(null);
       alert('❌ Chyba při přesunutí: ' + (err instanceof Error ? err.message : 'Neznámá chyba'));
@@ -366,10 +392,15 @@ const FileManagerV2: React.FC = () => {
   };
 
   const currentItems = useMemo(() => {
-    let filtered = items.filter(item => 
-      item.parentId === currentFolderId && 
-      (searchQuery === '' || item.name.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
+    console.log('🔍 Filtering items:', { currentFolderId, itemsCount: items.length, searchQuery });
+    let filtered = items.filter(item => {
+      const match = item.parentId === currentFolderId;
+      if (!match && currentFolderId === null) {
+        console.log('❌ Item', item.name, 'has parentId:', item.parentId, 'but currentFolderId is null');
+      }
+      return match && (searchQuery === '' || item.name.toLowerCase().includes(searchQuery.toLowerCase()));
+    });
+    console.log('✅ Filtered to', filtered.length, 'items');
 
     // Sorting
     filtered.sort((a, b) => {
