@@ -176,6 +176,21 @@ export const dataStore = new DataStore();
 export class MediaDB {
   private cacheKey = 'jakub_minka_media_cache';
 
+  // Convert camelCase to snake_case for database
+  private toSnakeCase(item: any) {
+    return {
+      id: item.id,
+      name: item.name,
+      type: item.type,
+      size: item.size,
+      url: item.url,
+      parent_id: item.parentId || null,
+      specialization_id: item.specializationId || null,
+      updated_at: new Date().toISOString(),
+      created_at: item.created_at || new Date().toISOString()
+    };
+  }
+
   async getAll(): Promise<any[]> {
     try {
       const { data, error } = await supabase
@@ -197,9 +212,10 @@ export class MediaDB {
     localStorage.setItem(this.cacheKey, JSON.stringify([item, ...current]));
     
     try {
+      const dbItem = this.toSnakeCase(item);
       const { error } = await supabase
         .from('media_meta')
-        .upsert([{ ...item, updated_at: new Date().toISOString() }], { onConflict: 'id' });
+        .upsert([dbItem], { onConflict: 'id' });
       
       if (error) throw error;
     } catch (e) {
@@ -230,9 +246,17 @@ export class MediaDB {
     localStorage.setItem(this.cacheKey, JSON.stringify(current.map((i: any) => i.id === id ? { ...i, ...data } : i)));
 
     try {
+      const dbData = {
+        ...(data.name && { name: data.name }),
+        ...(data.type && { type: data.type }),
+        ...(data.url && { url: data.url }),
+        ...(data.parentId !== undefined && { parent_id: data.parentId }),
+        ...(data.specializationId !== undefined && { specialization_id: data.specializationId }),
+        updated_at: new Date().toISOString()
+      };
       const { error } = await supabase
         .from('media_meta')
-        .update({ ...data, updated_at: new Date().toISOString() })
+        .update(dbData)
         .eq('id', id);
       
       if (error) throw error;
