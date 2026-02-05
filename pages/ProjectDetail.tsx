@@ -3,6 +3,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Project, MediaType, GalleryItem } from '../types';
 import { PROJECTS as DEFAULT_PROJECTS } from '../constants';
+import { projectDB } from '../lib/db';
 import { 
   ArrowLeft, ChevronRight, ChevronLeft, Play, PackageCheck, X, Maximize2, Camera, Layers
 } from 'lucide-react';
@@ -17,8 +18,8 @@ const ProjectDetail: React.FC = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
     const load = async () => {
-      const saved = localStorage.getItem('jakub_minka_projects');
-      const allProjects: Project[] = saved ? JSON.parse(saved) : DEFAULT_PROJECTS;
+      const dbProjects = await projectDB.getAll();
+      const allProjects = dbProjects && dbProjects.length > 0 ? dbProjects : DEFAULT_PROJECTS;
       const found = allProjects.find(p => p.id === id);
       if (found) {
         setProject(found);

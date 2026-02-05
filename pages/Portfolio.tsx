@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { PROJECTS as DEFAULT_PROJECTS, SPECIALIZATIONS } from '../constants';
 import { Project, MediaType } from '../types';
+import { projectDB } from '../lib/db';
 import MasonryGrid from '../components/MasonryGrid';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -33,10 +34,15 @@ const Portfolio: React.FC = () => {
   const [headerBg, setHeaderBg] = useState('https://images.unsplash.com/photo-1492724441997-5dc865305da7?auto=format&fit=crop&q=80&w=2000');
 
   useEffect(() => {
-    const saved = localStorage.getItem('jakub_minka_projects');
-    if (saved) {
-      setProjects(JSON.parse(saved));
-    }
+    const load = async () => {
+      const dbProjects = await projectDB.getAll();
+      if (dbProjects && dbProjects.length > 0) {
+        setProjects(dbProjects);
+      } else {
+        setProjects(DEFAULT_PROJECTS);
+      }
+    };
+    load();
     
     const savedSettings = localStorage.getItem('jakub_minka_web_settings');
     if (savedSettings) {

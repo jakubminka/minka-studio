@@ -24,7 +24,7 @@ import {
   Database
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import FileManager from '../components/Admin/FileManager';
+import FileManagerV2 from '../components/Admin/FileManagerV2';
 import ReviewManager from '../components/Admin/ReviewManager';
 import ProjectManagerV2 from '../components/Admin/ProjectManagerV2';
 import BlogManager from '../components/Admin/BlogManager';
@@ -188,7 +188,7 @@ const AdminDashboard: React.FC = () => {
         <div className="p-10">
           <AnimatePresence mode="wait">
             <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-              {activeTab === 'files' && <FileManager />}
+              {activeTab === 'files' && <FileManagerV2 />}
               {activeTab === 'reviews' && <ReviewManager />}
               {activeTab === 'projects' && <ProjectManagerV2 />}
               {activeTab === 'blog' && <BlogManager />}

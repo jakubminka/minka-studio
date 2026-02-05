@@ -155,6 +155,27 @@ export const PROJECTS: Project[] = Array.from({ length: 40 }).map((_, i) => {
     thumbnailSource: 'pc',
     date: new Date().toISOString(),
     type: type,
+    gallery: [
+      {
+        id: `gallery-${i}-1`,
+        url: `https://picsum.photos/id/${(i * 3) + 101}/1920/1080`,
+        type: 'image',
+        source: 'pc'
+      },
+      {
+        id: `gallery-${i}-2`,
+        url: `https://picsum.photos/id/${(i * 3) + 102}/1920/1080`,
+        type: 'image',
+        source: 'pc'
+      },
+      {
+        id: `gallery-${i}-3`,
+        url: `https://picsum.photos/id/${(i * 3) + 103}/1920/1080`,
+        type: 'image',
+        source: 'pc'
+      }
+    ],
+    servicesDelivered: 'Fotografování\nStrihová práce\nKorekce barvy\nGrafická úprava'
   };
 });
 
