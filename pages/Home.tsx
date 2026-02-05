@@ -14,6 +14,9 @@ const Home: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [partners, setPartners] = useState<{id: string, name: string}[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
+  
+  // Zobrazit pouze prvních 4 recenze
+  const displayedReviews = useMemo(() => reviews.slice(0, 4), [reviews]);
   const [hoverSide, setHoverSide] = useState<'left' | 'right' | null>(null);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [settings, setSettings] = useState<WebSettings>({
@@ -82,6 +85,13 @@ const Home: React.FC = () => {
     window.addEventListener('storage', load);
     return () => window.removeEventListener('storage', load);
   }, []);
+
+  // Reset review index pokud je mimo rozsah
+  useEffect(() => {
+    if (currentReviewIndex >= displayedReviews.length && displayedReviews.length > 0) {
+      setCurrentReviewIndex(0);
+    }
+  }, [displayedReviews.length, currentReviewIndex]);
 
   const homePortfolioProjects = useMemo(() => {
     return [...projects].sort(() => Math.random() - 0.5).slice(0, 12);
@@ -168,7 +178,7 @@ const Home: React.FC = () => {
 
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center px-6 pointer-events-none">
           <AnimatePresence mode="wait">
-            <motion.div key={currentSlide} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -30 }} transition={{ duration: 0.8 }} className="flex flex-col items-center">
+            <motion.div key={currentSlide} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.4, ease: "easeInOut" }} className="flex flex-col items-center">
               <span className="bg-[#007BFF] text-white font-black text-[9px] uppercase tracking-[0.5em] px-6 py-2.5 mb-8 shadow-xl">
                 {activeProject?.category || settings.homeHeroSubtitle}
               </span>
@@ -330,46 +340,46 @@ const Home: React.FC = () => {
             <h2 className="text-5xl md:text-7xl font-black uppercase tracking-tighter text-black">Zpětná vazba</h2>
           </div>
           
-          {reviews.length > 0 ? (
+          {displayedReviews.length > 0 ? (
             <div className="space-y-8">
               {/* Carousel */}
               <div className="relative">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={currentReviewIndex}
-                    initial={{ opacity: 0, x: 50 }}
+                    initial={{ opacity: 0, x: 30 }}
                     animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -50 }}
-                    transition={{ duration: 0.5 }}
+                    exit={{ opacity: 0, x: -30 }}
+                    transition={{ duration: 0.3, ease: "easeInOut" }}
                     className="bg-gray-50 p-10 md:p-16 border border-gray-100 relative group hover:border-[#007BFF] transition-all duration-500 shadow-sm min-h-[400px] flex flex-col justify-between"
                   >
                     <Quote className="absolute top-6 right-6 text-[#007BFF]/5 group-hover:text-[#007BFF]/10 transition-colors" size={48} />
                     <div>
                       <div className="flex gap-1 mb-8">
-                        {[...Array(reviews[currentReviewIndex].rating)].map((_, i) => <Star key={i} size={14} fill="currentColor" className="text-[#007BFF]" />)}
+                        {[...Array(displayedReviews[currentReviewIndex].rating)].map((_, i) => <Star key={i} size={14} fill="currentColor" className="text-[#007BFF]" />)}
                       </div>
                       <p className="text-gray-600 text-xl font-medium leading-relaxed mb-10 group-hover:text-black transition-colors">
-                        "{reviews[currentReviewIndex].text}"
+                        "{displayedReviews[currentReviewIndex].text}"
                       </p>
                     </div>
                     <div className="pt-8 border-t border-gray-200">
-                      <h4 className="font-black uppercase tracking-widest text-[11px] text-black">{reviews[currentReviewIndex].author}</h4>
-                      <span className="text-[9px] font-bold text-[#007BFF] uppercase tracking-widest mt-1 block">{reviews[currentReviewIndex].platform === 'google' ? 'GOOGLE MAPS' : reviews[currentReviewIndex].platform === 'firmy' ? 'FIRMY.CZ' : 'OVĚŘENO'}</span>
+                      <h4 className="font-black uppercase tracking-widest text-[11px] text-black">{displayedReviews[currentReviewIndex].author}</h4>
+                      <span className="text-[9px] font-bold text-[#007BFF] uppercase tracking-widest mt-1 block">{displayedReviews[currentReviewIndex].platform === 'google' ? 'GOOGLE MAPS' : displayedReviews[currentReviewIndex].platform === 'firmy' ? 'FIRMY.CZ' : 'OVĚŘENO'}</span>
                     </div>
                   </motion.div>
                 </AnimatePresence>
 
                 {/* Navigation Arrows */}
-                {reviews.length > 1 && (
+                {displayedReviews.length > 1 && (
                   <>
                     <button
-                      onClick={() => setCurrentReviewIndex((prev) => (prev - 1 + reviews.length) % reviews.length)}
+                      onClick={() => setCurrentReviewIndex((prev) => (prev - 1 + displayedReviews.length) % displayedReviews.length)}
                       className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-16 md:-translate-x-20 w-12 h-12 flex items-center justify-center rounded-full bg-[#007BFF] text-white hover:bg-black transition-all shadow-lg"
                     >
                       <ArrowLeft size={20} />
                     </button>
                     <button
-                      onClick={() => setCurrentReviewIndex((prev) => (prev + 1) % reviews.length)}
+                      onClick={() => setCurrentReviewIndex((prev) => (prev + 1) % displayedReviews.length)}
                       className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-16 md:translate-x-20 w-12 h-12 flex items-center justify-center rounded-full bg-[#007BFF] text-white hover:bg-black transition-all shadow-lg"
                     >
                       <ArrowRight size={20} />
@@ -378,22 +388,20 @@ const Home: React.FC = () => {
                 )}
               </div>
 
-              {/* Breadcrumbs */}
-              {reviews.length > 1 && (
-                <div className="flex justify-center flex-wrap gap-3">
-                  {reviews.map((_, idx) => (
+              {/* Breadcrumbs - pouze tečky */}
+              {displayedReviews.length > 1 && (
+                <div className="flex justify-center gap-3">
+                  {displayedReviews.map((_, idx) => (
                     <button
                       key={idx}
                       onClick={() => setCurrentReviewIndex(idx)}
-                      className={`px-4 py-2 text-[9px] font-black uppercase tracking-widest transition-all ${
+                      className={`w-3 h-3 rounded-full transition-all duration-300 ${
                         currentReviewIndex === idx
-                          ? 'bg-[#007BFF] text-white shadow-lg'
-                          : 'bg-gray-100 text-gray-400 hover:text-black'
+                          ? 'bg-[#007BFF] scale-125 shadow-lg'
+                          : 'bg-gray-300 hover:bg-gray-400'
                       }`}
-                    >
-                      <span className="hidden sm:inline">{reviews[idx].author.split(' ')[0]}</span>
-                      <span className="sm:hidden">{idx + 1}</span>
-                    </button>
+                      aria-label={`Recenze ${idx + 1}`}
+                    />
                   ))}
                 </div>
               )}
