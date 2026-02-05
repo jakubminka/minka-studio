@@ -37,9 +37,6 @@ const FileManagerV2: React.FC = () => {
   const [items, setItems] = useState<FileItem[]>([]);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   
-  const previewItems = useMemo(() => {
-    return currentItems.filter(item => item.type !== 'folder');
-  }, [currentItems]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [uploadQueue, setUploadQueue] = useState<UploadStatus[]>([]);
   const [isQueueMinimized, setIsQueueMinimized] = useState(false);
@@ -132,7 +129,7 @@ const FileManagerV2: React.FC = () => {
           url: publicUrl, 
           parentId: currentFolderId, 
           specializationId: storagePath,
-          created_at: new Date().toISOString()
+          updatedAt: new Date().toISOString()
         };
 
         await mediaDB.save(newItem);
@@ -222,7 +219,7 @@ const FileManagerV2: React.FC = () => {
         parentId: currentFolderId,
         size: '—',
         url: '',
-        created_at: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         specializationId: ''
       };
       
@@ -244,6 +241,10 @@ const FileManagerV2: React.FC = () => {
       return a.name.localeCompare(b.name);
     });
   }, [items, currentFolderId, searchQuery]);
+
+  const previewItems = useMemo(() => {
+    return currentItems.filter(item => item.type !== 'folder');
+  }, [currentItems]);
 
   const folderPath = useMemo(() => {
     let current = currentFolderId;
@@ -444,7 +445,7 @@ const FileManagerV2: React.FC = () => {
                     {item.type === 'folder' ? '📁 Složka' : item.type === 'image' ? '🖼️ Foto' : item.type === 'video' ? '🎬 Video' : '📄 Soubor'}
                   </td>
                   <td className="px-6 py-3 text-gray-500">{item.size || '—'}</td>
-                  <td className="px-6 py-3 text-gray-500">{formatDate(item.created_at)}</td>
+                  <td className="px-6 py-3 text-gray-500">{formatDate(item.updatedAt)}</td>
                   <td className="px-6 py-3 text-center">
                     <div className="flex gap-2 justify-center">
                       {item.type !== 'folder' && (
@@ -570,7 +571,7 @@ const FileManagerV2: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-[9px] font-black uppercase text-gray-500 mb-1">Vytvořeno</p>
-                  <p className="text-white text-sm">{formatDate(previewItems[previewIndex]?.created_at)}</p>
+                  <p className="text-white text-sm">{formatDate(previewItems[previewIndex]?.updatedAt)}</p>
                 </div>
                 <div className="flex gap-2">
                   <button 
@@ -679,7 +680,7 @@ const FileManagerV2: React.FC = () => {
                   </div>
                   <div>
                     <p className="text-gray-500 mb-1">Vytvořeno</p>
-                    <p className="text-gray-800">{formatDate(showMetadataEditor.created_at)}</p>
+                    <p className="text-gray-800">{formatDate(showMetadataEditor.updatedAt)}</p>
                   </div>
                   <div>
                     <p className="text-gray-500 mb-1">ID</p>

@@ -123,7 +123,7 @@ const ProjectManagerV2: React.FC = () => {
   // Handle gallery uploads
   const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files?.length) return;
-    const files = Array.from(e.target.files);
+    const files = Array.from(e.target.files) as File[];
     setIsProcessing(true);
     const quality = parseFloat(localStorage.getItem('jakub_minka_compression_quality') || '0.8');
 

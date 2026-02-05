@@ -15,7 +15,7 @@ import NotFound from './pages/NotFound';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import CookieBar from './components/CookieBar';
-import { supabase } from './supabaseClient';
+import { supabase } from './src/supabaseClient';
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
