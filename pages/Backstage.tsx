@@ -13,6 +13,7 @@ const Backstage: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [settings, setSettings] = useState<WebSettings>({
     backstage: [],
+    homeHeader: '',
     profilePic: '',
     bio: '',
     ico: '',

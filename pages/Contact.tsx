@@ -21,6 +21,7 @@ const Contact: React.FC = () => {
   const [settings, setSettings] = useState<WebSettings>({
     contactHeader: 'https://images.unsplash.com/photo-1534536281715-e28d76689b4d?auto=format&fit=crop&q=80&w=2000',
     blogHeader: '',
+    homeHeader: '',
     profilePic: 'https://picsum.photos/id/64/800/800',
     bio: 'Profesionální fotograf a kameraman se smyslem pro detail a unikátní vizuální vyprávění.',
     ico: '',
@@ -33,6 +34,12 @@ const Contact: React.FC = () => {
     specializationHeaders: {},
     homeAboutTitle: '',
     homeAboutText: '',
+    homeHeroTitle: '',
+    homeHeroSubtitle: '',
+    specificationsTitle: '',
+    specificationsSubtitle: '',
+    contactTitle: '',
+    contactSubtitle: '',
     footerDescription: '',
     doc1Name: 'Ochrana soukromí',
     doc1Url: '/ochrana-soukromi',
@@ -50,9 +57,7 @@ const Contact: React.FC = () => {
     price2Title: '',
     price2Value: '',
     price2Desc: '',
-    pricingCta: '',
-    privacyContent: '',
-    termsContent: ''
+    pricingCta: ''
   });
 
   useEffect(() => {
