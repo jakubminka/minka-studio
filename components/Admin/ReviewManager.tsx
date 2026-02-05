@@ -33,6 +33,28 @@ const ReviewManager: React.FC = () => {
     date: ''
   });
 
+  const mapFromDb = (item: any): Review => {
+    return {
+      id: item.id,
+      author: item.author || 'Anonymní klient',
+      text: item.text || item.content || '',
+      rating: typeof item.rating === 'number' ? item.rating : 5,
+      platform: item.platform || item.company || 'manual',
+      date: item.date || ''
+    } as Review;
+  };
+
+  const mapToDb = (review: Review) => {
+    return {
+      id: review.id,
+      author: review.author,
+      content: review.text,
+      rating: review.rating,
+      company: review.platform,
+      date: review.date
+    };
+  };
+
   const loadData = async () => {
     const initKey = 'jakub_minka_reviews_initialized';
     // Try to migrate from old localStorage key
@@ -49,7 +71,7 @@ const ReviewManager: React.FC = () => {
     const saved = await dataStore.collection('reviews').getAll();
     const isInitialized = localStorage.getItem(initKey) === 'true';
     if (saved && saved.length > 0) {
-      setReviews(saved);
+      setReviews(saved.map(mapFromDb));
       if (!isInitialized) localStorage.setItem(initKey, 'true');
       return;
     }
@@ -57,7 +79,7 @@ const ReviewManager: React.FC = () => {
     if (!isInitialized) {
       // Initialize with default reviews only on first run
       for (const review of INITIAL_REVIEWS) {
-        await dataStore.collection('reviews').save(review);
+        await dataStore.collection('reviews').save(mapToDb(review));
       }
       setReviews(INITIAL_REVIEWS);
       localStorage.setItem(initKey, 'true');
@@ -69,7 +91,7 @@ const ReviewManager: React.FC = () => {
   useEffect(() => { loadData(); }, []);
 
   const saveReview = async (review: Review) => {
-    await dataStore.collection('reviews').save(review);
+    await dataStore.collection('reviews').save(mapToDb(review));
     await loadData();
   };
 
