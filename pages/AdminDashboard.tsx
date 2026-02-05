@@ -26,7 +26,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import FileManager from '../components/Admin/FileManager';
 import ReviewManager from '../components/Admin/ReviewManager';
-import ProjectManager from '../components/Admin/ProjectManager';
+import ProjectManagerV2 from '../components/Admin/ProjectManagerV2';
 import BlogManager from '../components/Admin/BlogManager';
 import PartnerManager from '../components/Admin/PartnerManager';
 import InquiryManager from '../components/Admin/InquiryManager';
@@ -190,7 +190,7 @@ const AdminDashboard: React.FC = () => {
             <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
               {activeTab === 'files' && <FileManager />}
               {activeTab === 'reviews' && <ReviewManager />}
-              {activeTab === 'projects' && <ProjectManager />}
+              {activeTab === 'projects' && <ProjectManagerV2 />}
               {activeTab === 'blog' && <BlogManager />}
               {activeTab === 'partners' && <PartnerManager />}
               {activeTab === 'inquiries' && <InquiryManager />}
