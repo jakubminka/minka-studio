@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { HashRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -15,8 +15,7 @@ import NotFound from './pages/NotFound';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import CookieBar from './components/CookieBar';
-import React, { useState, useEffect, useMemo } from 'react'; // Přidáno useEffect, useState
-import { supabase } from './supabaseClient'; // Cesta k souboru, co jsme vytvořili
+import { supabase } from './supabaseClient';
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
