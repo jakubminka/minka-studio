@@ -73,7 +73,7 @@ const FileManager: React.FC = () => {
           .from('media')
           .upload(storagePath, fileToUpload, {
             cacheControl: '3600',
-            upsert: false
+            upsert: true
           });
 
         console.log('Supabase upload response:', uploadResp);

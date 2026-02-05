@@ -85,20 +85,18 @@ const FileManagerV2: React.FC = () => {
     });
     
     for (const file of fileList) {
-      // Kontrola duplikátů - je soubor s tímto jménem již v systému?
+      // Kontrola duplikátů - pouze v aktuální složce
       const fileName = file.name.split('.')[0];
-      const existingFile = items.find(i => i.name === fileName && i.type !== 'folder');
+      const existingFile = items.find(i => 
+        i.name === fileName && 
+        i.type !== 'folder' && 
+        i.parentId === currentFolderId
+      );
       
       if (existingFile) {
-        const uploadId = Math.random().toString(36).substr(2, 9);
-        setUploadQueue(prev => [...prev, { 
-          id: uploadId, 
-          fileName: file.name, 
-          progress: 0, 
-          status: 'error', 
-          error: `Soubor "${file.name}" již existuje` 
-        }]);
-        continue;
+        console.warn(`⚠️ Soubor "${file.name}" již existuje v této složce, bude přepsán`);
+        // Smažeme starý záznam z databáze
+        await mediaDB.delete(existingFile.id);
       }
 
       const uploadId = Math.random().toString(36).substr(2, 9);
@@ -124,7 +122,7 @@ const FileManagerV2: React.FC = () => {
           .from('media')
           .upload(storagePath, fileToUpload, {
             cacheControl: '3600',
-            upsert: false
+            upsert: true
           });
 
         if (uploadResp.error) {
@@ -196,8 +194,13 @@ const FileManagerV2: React.FC = () => {
 
       // Delete from database
       await mediaDB.delete(id);
+      
+      // Clear cache to ensure fresh data
+      localStorage.removeItem('jakub_minka_cache_media_meta');
+      localStorage.removeItem('jakub_minka_cache_media_meta_ts');
+      
       setDeleteConfirm(null);
-      loadFiles();
+      await loadFiles();
     } catch (err) {
       console.error('Delete error:', err);
       alert('Chyba při mazání: ' + (err instanceof Error ? err.message : 'Neznámá chyba'));

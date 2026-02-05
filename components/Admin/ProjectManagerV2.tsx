@@ -101,7 +101,7 @@ const ProjectManagerV2: React.FC = () => {
 
     const { error: uploadError } = await supabase.storage
       .from('media')
-      .upload(storagePath, file, { cacheControl: '3600', upsert: false });
+      .upload(storagePath, file, { cacheControl: '3600', upsert: true });
 
     if (uploadError) throw uploadError;
 
@@ -114,37 +114,29 @@ const ProjectManagerV2: React.FC = () => {
     if (!e.target.files?.length) return;
     const files = Array.from(e.target.files) as File[];
     
-    // Load existing media to check for duplicates BEFORE starting
-    const existingMediaItems = await mediaDB.getAll({ force: true });
+    // Check only for duplicates in current project gallery
     const currentGalleryUrls = (formData.gallery || []).map(item => item.url);
-    const duplicatesInMedia: string[] = [];
     const duplicatesInGallery: string[] = [];
     const filesToUpload: File[] = [];
     
     for (const file of files) {
       const fileBaseName = file.name.split('.')[0];
-      const existingByName = existingMediaItems.find(item => 
-        item.name === fileBaseName && item.type === 'image'
+      
+      // Check if already in current project gallery
+      const inGallery = (formData.gallery || []).some(item => 
+        item.url.includes(fileBaseName)
       );
       
-      if (existingByName) {
-        // Check if already in current project gallery
-        if (currentGalleryUrls.includes(existingByName.url)) {
-          duplicatesInGallery.push(file.name);
-        } else {
-          duplicatesInMedia.push(file.name);
-        }
+      if (inGallery) {
+        duplicatesInGallery.push(file.name);
       } else {
         filesToUpload.push(file);
       }
     }
     
-    // Show error if duplicates found
+    // Show error if duplicates found in current project
     if (duplicatesInGallery.length > 0) {
-      alert(`❌ Následující soubory již jsou v galerii tohoto projektu:\n${duplicatesInGallery.join('\n')}\n\nNebude přidáno.`);
-    }
-    if (duplicatesInMedia.length > 0) {
-      alert(`❌ Následující soubory již existují v hlavní galerii médií:\n${duplicatesInMedia.join('\n')}\n\nPoužijte "Přidat z knihovny" pro přidání existujících souborů.`);
+      alert(`⚠️ Následující soubory již jsou v galerii tohoto projektu:\n${duplicatesInGallery.join('\n')}\n\nNebudou přidány znovu.`);
     }
     
     // If no new files to upload, we're done
