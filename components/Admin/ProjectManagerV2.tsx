@@ -20,10 +20,9 @@ const ProjectManagerV2: React.FC = () => {
   
   const [allMediaItems, setAllMediaItems] = useState<FileItem[]>([]);
   const [showMediaPicker, setShowMediaPicker] = useState(false);
-  const [pickerMode, setPickerMode] = useState<'thumbnail' | 'gallery'>('thumbnail');
+  const [pickerMode, setPickerMode] = useState<'gallery'>('gallery');
   const [selectedMedia, setSelectedMedia] = useState<Set<string>>(new Set());
   
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const draggedGalleryItem = useRef<number | null>(null);
 
   // Form state - všechny fieldy v jednom objektu
@@ -107,53 +106,6 @@ const ProjectManagerV2: React.FC = () => {
     return data.publicUrl;
   };
 
-  // Handle thumbnail upload
-  const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files?.[0]) return;
-    const file = e.target.files[0];
-    
-    // Check if file with same name already exists in media gallery
-    const existingMediaItems = await mediaDB.getAll();
-    const fileBaseName = file.name.split('.')[0];
-    const existingByName = existingMediaItems.find(item => 
-      item.name === fileBaseName && item.type === 'image'
-    );
-    
-    if (existingByName) {
-      // Reuse existing image
-      setFormData(p => ({ ...p, thumbnailUrl: existingByName.url, thumbnailSource: 'storage' }));
-      console.log('🔄 File already exists in media gallery, reusing:', existingByName.name);
-      return;
-    }
-    
-    setIsProcessing(true);
-    try {
-      const quality = parseFloat(localStorage.getItem('jakub_minka_compression_quality') || '0.8');
-      const webpBlob = await convertToWebP(file, quality);
-      const url = await uploadFileToStorage(webpBlob, file.name);
-      
-      // Add to media gallery (we already checked it doesn't exist)
-      const mediaItem: FileItem = {
-        id: 'm-' + Math.random().toString(36).substr(2, 9),
-        name: fileBaseName,
-        type: 'image',
-        size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
-        url,
-        parentId: null,
-        specializationId: '',
-        updatedAt: new Date().toISOString()
-      };
-      await mediaDB.save(mediaItem);
-      console.log('✅ Thumbnail added to media gallery:', mediaItem.name);
-      
-      setFormData(p => ({ ...p, thumbnailUrl: url, thumbnailSource: 'storage' }));
-    } catch (err) {
-      alert('Error uploading thumbnail: ' + (err instanceof Error ? err.message : String(err)));
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
   // Handle gallery uploads
   const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files?.length) return;
@@ -232,23 +184,19 @@ const ProjectManagerV2: React.FC = () => {
 
   // Callback for media picker - single selection (thumbnail)
   const handleMediaPickerSelect = (item: FileItem) => {
-    if (pickerMode === 'thumbnail') {
-      setFormData(p => ({ ...p, thumbnailUrl: item.url, thumbnailSource: 'storage' }));
-    }
+    // Only for gallery mode now (thumbnail removed)
     setShowMediaPicker(false);
   };
 
   // Callback for media picker - multiple selection (gallery)
   const handleMediaPickerMultiSelect = (items: FileItem[]) => {
-    if (pickerMode === 'gallery') {
-      const newGalleryItems = items.map(m => ({
-        id: m.id,
-        url: m.url,
-        type: m.type as any,
-        source: 'storage' as const
-      }));
-      setFormData(p => ({ ...p, gallery: [...(p.gallery || []), ...newGalleryItems] }));
-    }
+    const newGalleryItems = items.map(m => ({
+      id: m.id,
+      url: m.url,
+      type: m.type as any,
+      source: 'storage' as const
+    }));
+    setFormData(p => ({ ...p, gallery: [...(p.gallery || []), ...newGalleryItems] }));
     setShowMediaPicker(false);
   };
 
@@ -258,19 +206,13 @@ const ProjectManagerV2: React.FC = () => {
       .map(id => allMediaItems.find(m => m.id === id))
       .filter(Boolean) as FileItem[];
 
-    if (pickerMode === 'thumbnail') {
-      if (picked[0]) {
-        setFormData(p => ({ ...p, thumbnailUrl: picked[0]!.url, thumbnailSource: 'storage' }));
-      }
-    } else {
-      const newGalleryItems = picked.map(m => ({
-        id: m.id,
-        url: m.url,
-        type: m.type as any,
-        source: 'storage' as const
-      }));
-      setFormData(p => ({ ...p, gallery: [...(p.gallery || []), ...newGalleryItems] }));
-    }
+    const newGalleryItems = picked.map(m => ({
+      id: m.id,
+      url: m.url,
+      type: m.type as any,
+      source: 'storage' as const
+    }));
+    setFormData(p => ({ ...p, gallery: [...(p.gallery || []), ...newGalleryItems] }));
     setShowMediaPicker(false);
     setSelectedMedia(new Set());
   };
@@ -308,6 +250,16 @@ const ProjectManagerV2: React.FC = () => {
       alert('Zadejte název projektu');
       return;
     }
+    
+    // Auto-select random thumbnail from gallery if gallery has images
+    let thumbnailUrl = formData.thumbnailUrl || '';
+    const galleryImages = (formData.gallery || []).filter(item => item.type === 'image');
+    if (galleryImages.length > 0) {
+      const randomImage = galleryImages[Math.floor(Math.random() * galleryImages.length)];
+      thumbnailUrl = randomImage.url;
+      console.log('🎲 Auto-selected random thumbnail from gallery:', randomImage.url);
+    }
+    
     setIsProcessing(true);
 
     try {
@@ -323,8 +275,8 @@ const ProjectManagerV2: React.FC = () => {
         categoryId: formData.categoryId!,
         type: formData.type || MediaType.BOTH,
         date: formData.date || new Date().toISOString(),
-        thumbnailUrl: formData.thumbnailUrl || '',
-        thumbnailSource: formData.thumbnailSource as any || 'pc',
+        thumbnailUrl,
+        thumbnailSource: 'storage',
         gallery: formData.gallery || [],
         servicesDelivered: formData.servicesDelivered || '',
         youtubeUrl: youtubeUrlsJson
@@ -596,51 +548,12 @@ const ProjectManagerV2: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Thumbnail Section */}
-                <div className="border-t pt-8">
-                  <h3 className="text-sm font-black uppercase tracking-widest mb-4">Náhledový obrázek</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="border-2 border-dashed border-gray-300 p-6 rounded hover:border-[#007BFF] transition-all text-center"
-                    >
-                      <Upload size={24} className="mx-auto mb-2 text-gray-400" />
-                      <p className="text-[10px] font-black uppercase">Nahrát ze souboru</p>
-                      <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleThumbnailUpload}
-                        accept="image/*"
-                        className="hidden"
-                      />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setPickerMode('thumbnail'); setShowMediaPicker(true); }}
-                      className="border-2 border-[#007BFF] p-6 rounded hover:bg-blue-50 transition-all text-center"
-                    >
-                      <div className="mx-auto mb-2 text-[#007BFF] text-lg">📚</div>
-                      <p className="text-[10px] font-black uppercase">Z knihovny</p>
-                    </button>
-                    {formData.thumbnailUrl && (
-                      <div className="rounded border border-gray-200 overflow-hidden">
-                        <img src={formData.thumbnailUrl} alt="Thumbnail" className="w-full h-40 object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => setFormData(p => ({ ...p, thumbnailUrl: '' }))}
-                          className="w-full bg-red-100 text-red-600 p-2 text-[10px] font-black"
-                        >
-                          ODEBRAT
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
                 {/* Gallery Section */}
                 <div className="border-t pt-8">
-                  <h3 className="text-sm font-black uppercase tracking-widest mb-4">Galerie projektů</h3>
+                  <h3 className="text-sm font-black uppercase tracking-widest mb-4 flex items-center gap-2">
+                    Galerie projektů
+                    <span className="text-xs text-gray-400 font-normal">(Náhodný obrázek bude automaticky použit jako thumbnail)</span>
+                  </h3>
                   <div className="flex gap-4 mb-6">
                     <button
                       type="button"
