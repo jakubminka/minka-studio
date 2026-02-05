@@ -284,6 +284,103 @@ export class MediaDB {
 
 export const mediaDB = new MediaDB();
 
+export class BlogDB {
+  private cacheKey = 'jakub_minka_blog_cache';
+
+  // Convert camelCase to snake_case for database
+  private toSnakeCase(item: any) {
+    return {
+      id: item.id,
+      title: item.title,
+      excerpt: item.excerpt,
+      content: item.content,
+      image_url: item.coverImage || item.image_url,
+      author: item.author,
+      tags: Array.isArray(item.tags) ? item.tags : [],
+      date: item.date,
+      updated_at: new Date().toISOString(),
+      created_at: item.created_at || new Date().toISOString()
+    };
+  }
+
+  // Convert snake_case from database to camelCase for frontend
+  private toCamelCase(item: any) {
+    return {
+      id: item.id,
+      title: item.title,
+      excerpt: item.excerpt,
+      content: item.content,
+      coverImage: item.image_url,
+      author: item.author,
+      tags: Array.isArray(item.tags) ? item.tags : [],
+      date: item.date,
+      created_at: item.created_at,
+      updated_at: item.updated_at
+    };
+  }
+
+  async getAll(): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .from('blog')
+        .select('*')
+        .order('date', { ascending: false });
+      
+      if (error) throw error;
+      const items = (data || []).map(item => this.toCamelCase(item));
+      localStorage.setItem(this.cacheKey, JSON.stringify(items));
+      return items;
+    } catch (e) {
+      console.error('Blog load error:', e);
+      const cached = localStorage.getItem(this.cacheKey);
+      return cached ? JSON.parse(cached) : [];
+    }
+  }
+
+  async save(item: any): Promise<any> {
+    try {
+      const dbItem = this.toSnakeCase(item);
+      const { data, error } = await supabase
+        .from('blog')
+        .upsert([dbItem], { onConflict: 'id' })
+        .select();
+      
+      if (error) throw error;
+      
+      // Update localStorage
+      const current = JSON.parse(localStorage.getItem(this.cacheKey) || '[]');
+      const updated = [item, ...current.filter((i: any) => i.id !== item.id)];
+      localStorage.setItem(this.cacheKey, JSON.stringify(updated));
+      
+      window.dispatchEvent(new Event('storage'));
+      return data?.[0] ? this.toCamelCase(data[0]) : item;
+    } catch (e) {
+      console.error('Blog save error:', e);
+      throw e;
+    }
+  }
+
+  async delete(id: string): Promise<void> {
+    try {
+      const current = JSON.parse(localStorage.getItem(this.cacheKey) || '[]');
+      localStorage.setItem(this.cacheKey, JSON.stringify(current.filter((i: any) => i.id !== id)));
+
+      const { error } = await supabase
+        .from('blog')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+    } catch (e) {
+      console.error('Blog delete error:', e);
+      throw e;
+    }
+    window.dispatchEvent(new Event('storage'));
+  }
+}
+
+export const blogDB = new BlogDB();
+
 export class ProjectDB {
   private cacheKey = 'jakub_minka_projects_cache';
 

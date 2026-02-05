@@ -138,7 +138,7 @@ const Footer: React.FC = () => {
         <div className="lg:col-span-7">
           <div className="bg-white p-10 lg:p-16 shadow-2xl rounded-sm border border-gray-100 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-2 h-full bg-[#007BFF]"></div>
-            <h3 className="text-3xl font-black uppercase tracking-tighter mb-12 text-black">Poptat <span className="text-[#007BFF]">MINKA Studio</span></h3>
+            <h3 className="text-3xl font-black uppercase tracking-tighter mb-12 text-black">Poptat <span className="text-[#007BFF]">Jakub Minka</span></h3>
             {formState === 'success' ? (
               <div className="py-20 text-center space-y-6">
                 <div className="flex justify-center text-green-500 mb-6"><CheckCircle2 size={64} className="animate-bounce" /></div>
@@ -165,7 +165,7 @@ const Footer: React.FC = () => {
         </div>
       </div>
       <div className="max-w-7xl mx-auto px-6 mt-32 pt-12 border-t border-gray-200 flex flex-col md:flex-row items-center justify-between text-gray-400 text-[10px] font-black uppercase tracking-[0.2em]">
-        <p>© {new Date().getFullYear()} MINKA Studio. Všechna práva vyhrazena.</p>
+        <p>© {new Date().getFullYear()} Jakub Minka - Foto & Video. Všechna práva vyhrazena.</p>
         <div className="flex gap-12 mt-6 md:mt-0">
           <button onClick={triggerCookieSettings} className="hover:text-[#007BFF] transition-colors flex items-center gap-2 uppercase tracking-widest">
             <Settings size={12} /> Nastavení soukromí

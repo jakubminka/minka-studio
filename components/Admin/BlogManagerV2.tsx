@@ -7,9 +7,10 @@ import {
   Check, RefreshCw, Eye, ChevronRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { projectDB, mediaDB } from '../../lib/db';
+import { blogDB, mediaDB } from '../../lib/db';
 import { supabase } from '../../src/supabaseClient';
 import EnhancedMediaPicker from './EnhancedMediaPicker';
+import EnhancedBlogEditor from './EnhancedBlogEditor';
 
 const BlogManagerV2: React.FC = () => {
   const [posts, setPosts] = useState<BlogPost[]>([]);
@@ -34,17 +35,8 @@ const BlogManagerV2: React.FC = () => {
 
   const loadData = async () => {
     try {
-      const saved = await supabase.from('blog').select('*').order('date', { ascending: false });
-      if (saved.data) setPosts(saved.data.map((p: any) => ({
-        id: p.id,
-        title: p.title,
-        content: p.content,
-        excerpt: p.excerpt || '',
-        coverImage: p.image_url || p.cover_image || '', // Try image_url first, fall back to cover_image
-        date: new Date(p.date).toISOString(),
-        author: p.author || 'Jakub Minka',
-        tags: p.tags || []
-      })));
+      const saved = await blogDB.getAll();
+      setPosts(saved);
       
       const dbItems = await mediaDB.getAll();
       setAllItems(dbItems.filter(i => i.type !== 'folder'));
@@ -96,25 +88,8 @@ const BlogManagerV2: React.FC = () => {
       };
 
       console.log('Saving blog post:', postData);
+      await blogDB.save(postData);
       
-      // Map camelCase to snake_case for Supabase
-      const dbPost: any = {
-        id: postData.id,
-        title: postData.title,
-        excerpt: postData.excerpt,
-        content: postData.content,
-        image_url: postData.coverImage, // Use image_url instead of cover_image (both work)
-        date: postData.date,
-        author: postData.author,
-        tags: postData.tags
-      };
-      
-      console.log('DB post (mapped):', dbPost);
-      const { error, data } = await supabase.from('blog').upsert([dbPost], { onConflict: 'id' });
-      
-      console.log('Upsert response:', { error, data });
-      if (error) throw error;
-
       await loadData();
       setShowForm(false);
       setEditingId(null);
@@ -128,6 +103,7 @@ const BlogManagerV2: React.FC = () => {
         tags: []
       });
       setContentHTML('');
+      alert('✓ Článek uložen');
     } catch (err) {
       console.error('Full error:', err);
       const errorMsg = err instanceof Error ? err.message : JSON.stringify(err);
@@ -135,26 +111,6 @@ const BlogManagerV2: React.FC = () => {
     } finally {
       setIsProcessing(false);
     }
-  };
-
-  const insertMarkdown = (before: string, after: string = '') => {
-    const textarea = document.getElementById('editor-content') as HTMLTextAreaElement;
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selectedText = contentHTML.substring(start, end) || 'text';
-    
-    const newContent = 
-      contentHTML.substring(0, start) +
-      before + selectedText + after +
-      contentHTML.substring(end);
-
-    setContentHTML(newContent);
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(start + before.length, start + before.length + selectedText.length);
-    }, 0);
   };
 
   const insertImage = (item: FileItem) => {
@@ -264,7 +220,7 @@ const BlogManagerV2: React.FC = () => {
                 <button
                   onClick={() => {
                     if (confirm('Smazat artikel?')) {
-                      supabase.from('blog').delete().eq('id', post.id).then(() => loadData());
+                      blogDB.delete(post.id).then(() => loadData());
                     }
                   }}
                   className="p-2 text-red-500 hover:bg-red-50 transition-all rounded"
@@ -325,95 +281,27 @@ const BlogManagerV2: React.FC = () => {
                   {/* Excerpt */}
                   <div>
                     <label className="block text-[11px] font-black uppercase text-gray-600 tracking-widest mb-2">
-                      Krátké shrnutí
+                      Krátké shrnutí (SEO)
                     </label>
                     <textarea 
                       value={formData.excerpt || ''}
                       onChange={e => setFormData({...formData, excerpt: e.target.value})}
-                      placeholder="Úryvek pro náhled v seznamu..."
+                      placeholder="160 znaků - vidí se v Google vyhledávání..."
                       rows={2}
                       className="w-full px-4 py-3 border border-gray-200 rounded resize-none focus:border-[#007BFF] outline-none"
                     />
+                    <p className="text-[9px] text-gray-500 mt-1">{formData.excerpt?.length || 0} / 160 znaků</p>
                   </div>
 
-                  {/* Editor Toolbar */}
-                  <div>
-                    <label className="block text-[11px] font-black uppercase text-gray-600 tracking-widest mb-2">
-                      Obsah
-                    </label>
-                    <div className="border border-gray-200 rounded-t bg-gray-50 p-3 flex flex-wrap gap-2 border-b-0">
-                      <button 
-                        type="button"
-                        onClick={() => insertMarkdown('**', '**')}
-                        title="Tučný text"
-                        className="p-2 border border-gray-300 bg-white hover:bg-[#007BFF] hover:text-white rounded transition-all"
-                      >
-                        <Bold size={16} />
-                      </button>
-                      <button 
-                        type="button"
-                        onClick={() => insertMarkdown('*', '*')}
-                        title="Kurzíva"
-                        className="p-2 border border-gray-300 bg-white hover:bg-[#007BFF] hover:text-white rounded transition-all"
-                      >
-                        <Italic size={16} />
-                      </button>
-                      <div className="w-px bg-gray-300"></div>
-                      <button 
-                        type="button"
-                        onClick={() => insertMarkdown('## ', '\n')}
-                        title="Nadpis 2"
-                        className="px-3 border border-gray-300 bg-white hover:bg-[#007BFF] hover:text-white rounded transition-all font-black text-sm"
-                      >
-                        H2
-                      </button>
-                      <button 
-                        type="button"
-                        onClick={() => insertMarkdown('### ', '\n')}
-                        title="Nadpis 3"
-                        className="px-3 border border-gray-300 bg-white hover:bg-[#007BFF] hover:text-white rounded transition-all font-black text-sm"
-                      >
-                        H3
-                      </button>
-                      <div className="w-px bg-gray-300"></div>
-                      <button 
-                        type="button"
-                        onClick={() => insertMarkdown('- ')}
-                        title="Odrážka"
-                        className="p-2 border border-gray-300 bg-white hover:bg-[#007BFF] hover:text-white rounded transition-all"
-                      >
-                        <List size={16} />
-                      </button>
-                      <div className="w-px bg-gray-300 ml-auto"></div>
-                      <button 
-                        type="button"
-                        onClick={() => setShowMediaPicker(true)}
-                        className="flex items-center gap-2 px-4 py-2 border border-[#007BFF] bg-[#007BFF] text-white rounded hover:bg-blue-700 transition-all text-[10px] font-black"
-                      >
-                        <LucideImage size={14} /> VLOŽIT MÉDIA
-                      </button>
-                    </div>
-
-                    {/* Editor */}
-                    <textarea 
-                      id="editor-content"
-                      value={contentHTML}
-                      onChange={e => setContentHTML(e.target.value)}
-                      placeholder="Piš obsah článku zde... Můžeš používat Markdown: **tučný**, *kurzíva*, # nadpis, - seznam..."
-                      rows={15}
-                      className="w-full px-4 py-4 border border-t-0 border-gray-200 rounded-b font-mono text-sm resize-none focus:border-[#007BFF] outline-none focus:border-t focus:border-gray-200"
+                  {/* Editor Toolbar and Content */}
+                  <div className="border border-gray-200 rounded overflow-hidden">
+                    <EnhancedBlogEditor
+                      content={contentHTML}
+                      coverImage={formData.coverImage || ''}
+                      title={formData.title || ''}
+                      onContentChange={setContentHTML}
+                      onMediaClick={() => setShowMediaPicker(true)}
                     />
-                  </div>
-
-                  <div className="bg-blue-50 border border-blue-200 rounded p-4 text-[10px] text-gray-700">
-                    <p className="font-black uppercase tracking-widest mb-2">💡 Markdown tipy:</p>
-                    <ul className="space-y-1 font-mono text-[9px]">
-                      <li>**text** = <strong>tučný text</strong></li>
-                      <li>*text* = <em>kurzíva</em></li>
-                      <li>## Nadpis = velký nadpis</li>
-                      <li>- položka = seznam</li>
-                      <li>![alt](url) = obrázek</li>
-                    </ul>
                   </div>
                 </div>
 
