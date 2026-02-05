@@ -44,6 +44,7 @@ export interface Project {
   gallery?: GalleryItem[];
   weight?: number;
   servicesDelivered?: string;
+  youtubeUrl?: string;
 }
 
 export interface BlogPost {

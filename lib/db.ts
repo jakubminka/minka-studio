@@ -297,6 +297,7 @@ export class ProjectDB {
       thumbnail_source: item.thumbnailSource,
       gallery: item.gallery,
       services_delivered: item.servicesDelivered,
+      youtube_url: item.youtubeUrl,
       updated_at: new Date().toISOString(),
       created_at: item.created_at || new Date().toISOString()
     };
@@ -317,6 +318,7 @@ export class ProjectDB {
       thumbnailSource: item.thumbnail_source,
       gallery: item.gallery,
       servicesDelivered: item.services_delivered,
+      youtubeUrl: item.youtube_url,
       created_at: item.created_at,
       updated_at: item.updated_at
     };

@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS projects (
   thumbnail_source TEXT,
   gallery JSONB,
   services_delivered TEXT,
+  youtube_url TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

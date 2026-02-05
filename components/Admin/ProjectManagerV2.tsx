@@ -36,7 +36,8 @@ const ProjectManagerV2: React.FC = () => {
     thumbnailUrl: '',
     thumbnailSource: 'pc',
     gallery: [],
-    servicesDelivered: ''
+    servicesDelivered: '',
+    youtubeUrl: ''
   });
 
   // Load projects and media
@@ -227,7 +228,8 @@ const ProjectManagerV2: React.FC = () => {
         thumbnailUrl: formData.thumbnailUrl || '',
         thumbnailSource: formData.thumbnailSource as any || 'pc',
         gallery: formData.gallery || [],
-        servicesDelivered: formData.servicesDelivered || ''
+        servicesDelivered: formData.servicesDelivered || '',
+        youtubeUrl: formData.youtubeUrl || ''
       };
 
       await projectDB.save(project);
@@ -439,6 +441,20 @@ const ProjectManagerV2: React.FC = () => {
                     value={formData.servicesDelivered || ''}
                     onChange={e => setFormData(p => ({ ...p, servicesDelivered: e.target.value }))}
                     placeholder="Fotografie, editace, produkce, atd..."
+                    className="w-full border-2 border-gray-200 p-4 font-bold text-black outline-none focus:border-[#007BFF]"
+                  />
+                </div>
+
+                {/* YouTube URL */}
+                <div>
+                  <label className="text-[10px] font-black uppercase text-gray-400 block mb-2">
+                    YouTube odkaz (volitelné)
+                  </label>
+                  <input
+                    type="url"
+                    value={formData.youtubeUrl || ''}
+                    onChange={e => setFormData(p => ({ ...p, youtubeUrl: e.target.value }))}
+                    placeholder="https://www.youtube.com/watch?v=..."
                     className="w-full border-2 border-gray-200 p-4 font-bold text-black outline-none focus:border-[#007BFF]"
                   />
                 </div>
