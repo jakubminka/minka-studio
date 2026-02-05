@@ -10,17 +10,18 @@ import { dataStore, projectDB } from '../lib/db';
 
 const Home: React.FC = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [projects, setProjects] = useState<Project[]>(DEFAULT_PROJECTS);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [partners, setPartners] = useState<{id: string, name: string}[]>([]);
-  const [reviews, setReviews] = useState<Review[]>(DEFAULT_REVIEWS);
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [hoverSide, setHoverSide] = useState<'left' | 'right' | null>(null);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [settings, setSettings] = useState<WebSettings>({
     homeHeader: '', portfolioHeader: '', contactHeader: '', blogHeader: '', specializationHeaders: {},
     homeHeroTitle: 'VIZUÁLNÍ PŘÍBĚHY, KTERÉ PRODÁVAJÍ',
     homeHeroSubtitle: 'FOTOGRAF & KAMERAMAN',
     homeAboutTitle: 'O MNĚ',
     homeAboutText: 'Jsem fotograf a kameraman se zaměřením na komerční tvorbu, architekturu a průmysl. Mým cílem je zachytit podstatu vašeho projektu tak, aby oslovila ty správné lidi.',
-    profilePic: 'https://picsum.photos/id/64/800/800',
+    profilePic: '',
     specificationsTitle: 'SPECIALIZACE', specificationsSubtitle: 'CO PRO VÁS MOHU UDĚLAT',
     contactTitle: 'KONTAKT', contactSubtitle: 'POJĎME TVOŘIT',
     pricingTitle: 'Investice do vizuálu',
@@ -43,6 +44,7 @@ const Home: React.FC = () => {
     const load = async () => {
       const savedProjects = await projectDB.getAll();
       if (savedProjects.length > 0) setProjects(savedProjects);
+      else setProjects(DEFAULT_PROJECTS);
       
       const savedSettings = await dataStore.doc('web_settings').get();
       if (savedSettings) setSettings(prev => ({ ...prev, ...savedSettings }));
@@ -52,6 +54,9 @@ const Home: React.FC = () => {
 
       const savedReviews = await dataStore.collection('reviews').getAll();
       if (savedReviews.length > 0) setReviews(savedReviews);
+      else setReviews(DEFAULT_REVIEWS);
+      
+      setIsDataLoaded(true);
     };
     load();
     window.addEventListener('storage', load);

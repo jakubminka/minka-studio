@@ -40,6 +40,8 @@ const ProjectManagerV2: React.FC = () => {
     servicesDelivered: '',
     youtubeUrl: ''
   });
+  
+  const [youtubeUrls, setYoutubeUrls] = useState<string[]>([]);
 
   // Load projects and media
   useEffect(() => {
@@ -114,6 +116,29 @@ const ProjectManagerV2: React.FC = () => {
       const quality = parseFloat(localStorage.getItem('jakub_minka_compression_quality') || '0.8');
       const webpBlob = await convertToWebP(file, quality);
       const url = await uploadFileToStorage(webpBlob, file.name);
+      
+      // Check if this URL already exists in media gallery
+      const existingMediaItems = await mediaDB.getAll();
+      const exists = existingMediaItems.find(item => item.url === url);
+      
+      if (!exists) {
+        // Add to media gallery
+        const mediaItem: FileItem = {
+          id: 'm-' + Math.random().toString(36).substr(2, 9),
+          name: file.name.split('.')[0],
+          type: 'image',
+          size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+          url,
+          parentId: null,
+          specializationId: '',
+          updatedAt: new Date().toISOString()
+        };
+        await mediaDB.save(mediaItem);
+        console.log('✅ Thumbnail added to media gallery:', mediaItem.name);
+      } else {
+        console.log('🔄 Thumbnail already exists in media gallery, reusing');
+      }
+      
       setFormData(p => ({ ...p, thumbnailUrl: url, thumbnailSource: 'storage' }));
     } catch (err) {
       alert('Error uploading thumbnail: ' + (err instanceof Error ? err.message : String(err)));
@@ -129,6 +154,9 @@ const ProjectManagerV2: React.FC = () => {
     setIsProcessing(true);
     const quality = parseFloat(localStorage.getItem('jakub_minka_compression_quality') || '0.8');
 
+    // Load existing media to check for duplicates
+    const existingMediaItems = await mediaDB.getAll();
+
     for (const file of files) {
       const uploadId = Math.random().toString(36).substr(2, 9);
       setUploads(prev => [...prev, { id: uploadId, name: file.name, progress: 0 }]);
@@ -136,6 +164,27 @@ const ProjectManagerV2: React.FC = () => {
       try {
         const webpBlob = await convertToWebP(file, quality);
         const url = await uploadFileToStorage(webpBlob, file.name);
+
+        // Check if this URL already exists in media gallery
+        const exists = existingMediaItems.find(item => item.url === url);
+        
+        if (!exists) {
+          // Add to media gallery
+          const mediaItem: FileItem = {
+            id: 'm-' + uploadId,
+            name: file.name.split('.')[0],
+            type: 'image',
+            size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+            url,
+            parentId: null,
+            specializationId: '',
+            updatedAt: new Date().toISOString()
+          };
+          await mediaDB.save(mediaItem);
+          console.log('✅ Gallery image added to media gallery:', mediaItem.name);
+        } else {
+          console.log('🔄 Gallery image already exists in media gallery, reusing');
+        }
 
         const galleryItem: GalleryItem = {
           id: 'g-' + uploadId,
@@ -239,6 +288,9 @@ const ProjectManagerV2: React.FC = () => {
     setIsProcessing(true);
 
     try {
+      // Serialize youtubeUrls to JSON string
+      const youtubeUrlsJson = JSON.stringify(youtubeUrls.filter(u => u.trim()));
+      
       const project: Project = {
         id: editingId || 'p-' + Math.random().toString(36).substr(2, 9),
         title: formData.title,
@@ -252,7 +304,7 @@ const ProjectManagerV2: React.FC = () => {
         thumbnailSource: formData.thumbnailSource as any || 'pc',
         gallery: formData.gallery || [],
         servicesDelivered: formData.servicesDelivered || '',
-        youtubeUrl: formData.youtubeUrl || ''
+        youtubeUrl: youtubeUrlsJson
       };
 
       await projectDB.save(project);
@@ -292,11 +344,22 @@ const ProjectManagerV2: React.FC = () => {
       gallery: [],
       servicesDelivered: ''
     });
+    setYoutubeUrls([]);
   };
 
   const handleEdit = (project: Project) => {
     setEditingId(project.id);
     setFormData(project);
+    
+    // Parse youtubeUrl - can be JSON array or single string
+    try {
+      const parsed = JSON.parse(project.youtubeUrl || '[]');
+      setYoutubeUrls(Array.isArray(parsed) ? parsed : []);
+    } catch {
+      // If not JSON, treat as single URL
+      setYoutubeUrls(project.youtubeUrl ? [project.youtubeUrl] : []);
+    }
+    
     setShowForm(true);
   };
 
@@ -468,18 +531,46 @@ const ProjectManagerV2: React.FC = () => {
                   />
                 </div>
 
-                {/* YouTube URL */}
+                {/* YouTube URLs */}
                 <div>
-                  <label className="text-[10px] font-black uppercase text-gray-400 block mb-2">
-                    YouTube odkaz (volitelné)
+                  <label className="text-[10px] font-black uppercase text-gray-400 block mb-2 flex items-center justify-between">
+                    <span>YouTube videa (volitelné)</span>
+                    <button
+                      type="button"
+                      onClick={() => setYoutubeUrls([...youtubeUrls, ''])}
+                      className="bg-[#007BFF] text-white px-3 py-1 text-[8px] font-black uppercase rounded hover:bg-blue-700 flex items-center gap-1"
+                    >
+                      <Plus size={12} /> Přidat video
+                    </button>
                   </label>
-                  <input
-                    type="url"
-                    value={formData.youtubeUrl || ''}
-                    onChange={e => setFormData(p => ({ ...p, youtubeUrl: e.target.value }))}
-                    placeholder="https://www.youtube.com/watch?v=..."
-                    className="w-full border-2 border-gray-200 p-4 font-bold text-black outline-none focus:border-[#007BFF]"
-                  />
+                  <div className="space-y-2">
+                    {youtubeUrls.length === 0 && (
+                      <p className="text-xs text-gray-400 italic">Žádná YouTube videa</p>
+                    )}
+                    {youtubeUrls.map((url, idx) => (
+                      <div key={idx} className="flex gap-2">
+                        <input
+                          type="url"
+                          value={url}
+                          onChange={e => {
+                            const newUrls = [...youtubeUrls];
+                            newUrls[idx] = e.target.value;
+                            setYoutubeUrls(newUrls);
+                          }}
+                          placeholder="https://www.youtube.com/watch?v=..."
+                          className="flex-1 border-2 border-gray-200 p-3 font-bold text-sm text-black outline-none focus:border-[#007BFF]"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setYoutubeUrls(youtubeUrls.filter((_, i) => i !== idx))}
+                          className="px-3 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-all"
+                          title="Odebrat"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Thumbnail Section */}
