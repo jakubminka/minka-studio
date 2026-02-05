@@ -121,14 +121,28 @@ const ProjectDetail: React.FC = () => {
             muted
             playsInline
             className="absolute inset-0 w-full h-full object-cover opacity-60"
+            style={{ pointerEvents: 'none' }}
           />
         ) : singleVideoMode && singleVideoMode.source === 'youtube' ? (
-          <iframe
-            src={`${getYouTubeEmbedUrl(singleVideoMode.url)}?autoplay=1&mute=1&loop=1&playlist=${getYouTubeVideoId(singleVideoMode.url)}&controls=0&showinfo=0&modestbranding=1&playsinline=1`}
-            className="absolute inset-0 w-full h-full object-cover opacity-60"
-            style={{ pointerEvents: 'none' }}
-            allow="autoplay; encrypted-media"
-          />
+          <div className="absolute inset-0 w-full h-full overflow-hidden">
+            <iframe
+              src={`${getYouTubeEmbedUrl(singleVideoMode.url)}?autoplay=1&mute=1&loop=1&playlist=${getYouTubeVideoId(singleVideoMode.url)}&controls=0&showinfo=0&modestbranding=1&playsinline=1&fs=0&rel=0&iv_load_policy=3&disablekb=1`}
+              className="absolute opacity-60"
+              style={{ 
+                pointerEvents: 'none',
+                top: '50%',
+                left: '50%',
+                width: '177.77777778vh',
+                height: '56.25vw',
+                minHeight: '100%',
+                minWidth: '100%',
+                transform: 'translate(-50%, -50%)'
+              }}
+              allow="autoplay; encrypted-media"
+            />
+            {/* Transparent overlay to block all interactions */}
+            <div className="absolute inset-0 z-10" style={{ pointerEvents: 'auto' }}></div>
+          </div>
         ) : (
           <motion.img 
             initial={{ scale: 1.1, opacity: 0 }} 
