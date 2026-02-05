@@ -79,6 +79,12 @@ const ProjectDetail: React.FC = () => {
     return item.type === 'video' ? item : null;
   }, [project?.gallery]);
 
+  // Prefer video as header background when any video exists
+  const headerVideoItem = useMemo(() => {
+    if (!project?.gallery) return null;
+    return project.gallery.find(item => item.type === 'video') || null;
+  }, [project?.gallery]);
+
   const galleryLayout = useMemo(() => {
     if (!project?.gallery || project.gallery.length === 0) return [];
     return [...project.gallery].map(item => ({
@@ -89,13 +95,12 @@ const ProjectDetail: React.FC = () => {
 
   useEffect(() => {
     if (!project) return;
-    
-    // If only one video, use it as header background
-    if (singleVideoMode) {
+
+    if (headerVideoItem) {
       setHeaderImage('');
       return;
     }
-    
+
     const galleryImages = (project.gallery || []).filter(item => item.type === 'image');
     if (galleryImages.length > 0) {
       const randomImage = galleryImages[Math.floor(Math.random() * galleryImages.length)];
@@ -103,7 +108,7 @@ const ProjectDetail: React.FC = () => {
     } else {
       setHeaderImage(project.thumbnailUrl || '');
     }
-  }, [project?.id, singleVideoMode]);
+  }, [project?.id, headerVideoItem]);
 
   if (!project) return null;
 
@@ -112,10 +117,10 @@ const ProjectDetail: React.FC = () => {
       <header className="relative h-[85vh] flex items-center justify-center overflow-hidden bg-black">
         <div className="absolute inset-0 z-10 bg-gradient-to-t from-black via-black/20 to-transparent"></div>
         
-        {/* Video Header for single video projects */}
-        {singleVideoMode && singleVideoMode.source !== 'youtube' ? (
+        {/* Video Header when any video exists */}
+        {headerVideoItem && headerVideoItem.source !== 'youtube' ? (
           <video
-            src={singleVideoMode.url}
+            src={headerVideoItem.url}
             autoPlay
             loop
             muted
@@ -123,10 +128,10 @@ const ProjectDetail: React.FC = () => {
             className="absolute inset-0 w-full h-full object-cover opacity-60"
             style={{ pointerEvents: 'none' }}
           />
-        ) : singleVideoMode && singleVideoMode.source === 'youtube' ? (
+        ) : headerVideoItem && headerVideoItem.source === 'youtube' ? (
           <div className="absolute inset-0 w-full h-full overflow-hidden">
             <iframe
-              src={`${getYouTubeEmbedUrl(singleVideoMode.url)}?autoplay=1&mute=1&loop=1&playlist=${getYouTubeVideoId(singleVideoMode.url)}&controls=0&showinfo=0&modestbranding=1&playsinline=1&fs=0&rel=0&iv_load_policy=3&disablekb=1`}
+              src={`${getYouTubeEmbedUrl(headerVideoItem.url)}?autoplay=1&mute=1&loop=1&playlist=${getYouTubeVideoId(headerVideoItem.url)}&controls=0&showinfo=0&modestbranding=1&playsinline=1&fs=0&rel=0&iv_load_policy=3&disablekb=1`}
               className="absolute opacity-60"
               style={{ 
                 pointerEvents: 'none',
