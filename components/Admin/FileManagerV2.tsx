@@ -171,6 +171,49 @@ const FileManagerV2: React.FC = () => {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+
+    try {
+      let errorMessages: string[] = [];
+
+      for (const id of selectedIds) {
+        const item = items.find(i => i.id === id);
+        if (!item) continue;
+
+        try {
+          // Delete from storage if it's a file
+          if (item.type !== 'folder' && item.specializationId) {
+            const { error: deleteError } = await supabase.storage
+              .from('media')
+              .remove([item.specializationId]);
+            
+            if (deleteError && !deleteError.message.includes('not found')) {
+              console.warn(`Storage delete warning for ${item.name}:`, deleteError);
+            }
+          }
+
+          // Delete from database
+          await mediaDB.delete(id);
+        } catch (err) {
+          console.error(`Error deleting ${item.name}:`, err);
+          errorMessages.push(item.name);
+        }
+      }
+
+      setShowBulkDelete(false);
+      setSelectedIds(new Set());
+      loadFiles();
+
+      if (errorMessages.length > 0) {
+        alert(`Některé položky nebylo možné smazat: ${errorMessages.join(', ')}`);
+      }
+    } catch (err) {
+      console.error('Bulk delete error:', err);
+      alert('Chyba při hromadném mazání: ' + (err instanceof Error ? err.message : 'Neznámá chyba'));
+    }
+  };
+
   const handleRename = async (id: string, newName: string) => {
     if (!newName.trim()) return;
     
