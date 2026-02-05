@@ -9,6 +9,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { projectDB, mediaDB } from '../../lib/db';
 import { supabase } from '../../src/supabaseClient';
+import EnhancedMediaPicker from './EnhancedMediaPicker';
 
 const BlogManagerV2: React.FC = () => {
   const [posts, setPosts] = useState<BlogPost[]>([]);
@@ -166,6 +167,14 @@ const BlogManagerV2: React.FC = () => {
     const markdown = `<video src="${item.url}" controls style="width: 100%; margin: 1rem 0;" />\n`;
     setContentHTML(contentHTML + markdown);
     setShowMediaPicker(false);
+  };
+
+  const handleMediaPickerSelect = (item: FileItem) => {
+    if (item.type === 'image') {
+      insertImage(item);
+    } else if (item.type === 'video') {
+      insertVideo(item);
+    }
   };
 
   const filteredPosts = posts.filter(p =>
@@ -508,88 +517,18 @@ const BlogManagerV2: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Media Picker */}
-      <AnimatePresence>
-        {showMediaPicker && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setShowMediaPicker(false)}
-            className="fixed inset-0 z-[2000] bg-black/95 flex items-center justify-center p-4"
-          >
-            <motion.div 
-              initial={{ scale: 0.9 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.9 }}
-              onClick={e => e.stopPropagation()}
-              className="bg-white rounded-lg overflow-hidden w-full max-w-4xl max-h-[90vh] flex flex-col"
-            >
-              <div className="bg-gray-50 border-b p-6 flex justify-between items-center">
-                <div>
-                  <h3 className="text-xl font-black uppercase tracking-widest">Knihovna médií</h3>
-                  <p className="text-[10px] text-gray-500 uppercase mt-1">Klikni na foto/video pro vložení do článku</p>
-                </div>
-                <button onClick={() => setShowMediaPicker(false)} className="p-2 hover:bg-gray-200 rounded">
-                  <X size={24} />
-                </button>
-              </div>
-
-              <div className="overflow-y-auto flex-1 p-6 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
-                {allItems.map(item => (
-                  <div 
-                    key={item.id}
-                    className="group relative aspect-square border-2 border-gray-200 rounded hover:border-[#007BFF] transition-all overflow-hidden cursor-pointer bg-gray-50"
-                  >
-                    {item.type === 'image' && (
-                      <>
-                        <img src={item.url} alt="" className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all" />
-                        <button 
-                          onClick={() => {
-                            formData.coverImage ? insertImage(item) : setFormData({...formData, coverImage: item.url});
-                            setShowMediaPicker(false);
-                          }}
-                          className="absolute inset-0 bg-black/0 group-hover:bg-black/60 flex items-center justify-center transition-all"
-                        >
-                          <span className="text-white text-[10px] font-black uppercase opacity-0 group-hover:opacity-100">Vybrat</span>
-                        </button>
-                      </>
-                    )}
-                    {item.type === 'video' && (
-                      <>
-                        <div className="w-full h-full bg-gray-900 flex items-center justify-center">
-                          <LucideVideo size={24} className="text-gray-500" />
-                        </div>
-                        <button 
-                          onClick={() => {insertVideo(item)}}
-                          className="absolute inset-0 bg-black/0 group-hover:bg-black/60 flex items-center justify-center transition-all"
-                        >
-                          <span className="text-white text-[10px] font-black uppercase opacity-0 group-hover:opacity-100">Vložit</span>
-                        </button>
-                      </>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {/* Footer with info */}
-              {allItems.length === 0 && (
-                <div className="bg-blue-50 border-t p-6 text-center">
-                  <p className="text-[12px] text-gray-600 mb-2">Žádná média v galerii</p>
-                  <p className="text-[10px] text-gray-500">Přidej fotky a videa přes správce souborů v administraci</p>
-                </div>
-              )}
-              {allItems.length > 0 && (
-                <div className="bg-gray-50 border-t p-4 text-center">
-                  <p className="text-[10px] text-gray-600 uppercase tracking-widest">💡 Tip: Nová média můžeš přidat přes <strong>Správce souborů</strong> v administraci</p>
-                </div>
-              )}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Enhanced Media Picker */}
+      <EnhancedMediaPicker
+        isOpen={showMediaPicker}
+        onClose={() => setShowMediaPicker(false)}
+        onSelect={handleMediaPickerSelect}
+        allowMultiple={false}
+        allowUpload={true}
+        showFolders={true}
+      />
     </div>
   );
 };
 
 export default BlogManagerV2;
+

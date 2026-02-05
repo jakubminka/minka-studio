@@ -8,6 +8,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { mediaDB, dataStore, projectDB, optimizeImage } from '../../lib/db';
 import { supabase } from '../../src/supabaseClient';
+import EnhancedMediaPicker from './EnhancedMediaPicker';
 
 const ProjectManagerV2: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -157,7 +158,29 @@ const ProjectManagerV2: React.FC = () => {
     setIsProcessing(false);
   };
 
-  // Add from existing media library
+  // Callback for media picker - single selection (thumbnail)
+  const handleMediaPickerSelect = (item: FileItem) => {
+    if (pickerMode === 'thumbnail') {
+      setFormData(p => ({ ...p, thumbnailUrl: item.url, thumbnailSource: 'storage' }));
+    }
+    setShowMediaPicker(false);
+  };
+
+  // Callback for media picker - multiple selection (gallery)
+  const handleMediaPickerMultiSelect = (items: FileItem[]) => {
+    if (pickerMode === 'gallery') {
+      const newGalleryItems = items.map(m => ({
+        id: m.id,
+        url: m.url,
+        type: m.type as any,
+        source: 'storage' as const
+      }));
+      setFormData(p => ({ ...p, gallery: [...(p.gallery || []), ...newGalleryItems] }));
+    }
+    setShowMediaPicker(false);
+  };
+
+  // Add from existing media library (legacy - keep for compatibility)
   const handleAddFromLibrary = () => {
     const picked = Array.from(selectedMedia.values())
       .map(id => allMediaItems.find(m => m.id === id))
@@ -603,80 +626,16 @@ const ProjectManagerV2: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Media Picker Modal */}
-      <AnimatePresence>
-        {showMediaPicker && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
-            onClick={() => setShowMediaPicker(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.9 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.9 }}
-              className="bg-white w-full max-w-3xl max-h-[80vh] overflow-y-auto rounded-sm shadow-2xl"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="sticky top-0 bg-black text-white p-6 flex justify-between items-center">
-                <h2 className="text-lg font-black uppercase">Vybrat médium</h2>
-                <button onClick={() => setShowMediaPicker(false)}>
-                  <X size={24} />
-                </button>
-              </div>
-
-              <div className="p-8">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-8">
-                  {allMediaItems.map(item => (
-                    <motion.div
-                      key={item.id}
-                      onClick={() => {
-                        setSelectedMedia(prev => {
-                          const newSet = new Set(prev);
-                          newSet.has(item.id) ? newSet.delete(item.id) : newSet.add(item.id);
-                          return newSet;
-                        });
-                      }}
-                      className={`relative cursor-pointer border-2 rounded overflow-hidden aspect-square ${
-                        selectedMedia.has(item.id) ? 'border-[#007BFF] bg-blue-50' : 'border-gray-200'
-                      }`}
-                    >
-                      {item.type === 'image' ? (
-                        <img src={item.url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <video src={item.url} className="w-full h-full object-cover" />
-                      )}
-                      {selectedMedia.has(item.id) && (
-                        <div className="absolute inset-0 bg-[#007BFF]/20 flex items-center justify-center">
-                          <CheckSquare size={32} className="text-[#007BFF]" />
-                        </div>
-                      )}
-                    </motion.div>
-                  ))}
-                </div>
-
-                <div className="flex gap-4">
-                  <button
-                    onClick={handleAddFromLibrary}
-                    disabled={selectedMedia.size === 0}
-                    className="flex-1 bg-[#007BFF] text-white py-4 text-[10px] font-black uppercase hover:bg-black disabled:bg-gray-400"
-                  >
-                    VYBRAT ({selectedMedia.size})
-                  </button>
-                  <button
-                    onClick={() => setShowMediaPicker(false)}
-                    className="px-8 py-4 border-2 border-gray-200 text-[10px] font-black uppercase"
-                  >
-                    Zrušit
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Enhanced Media Picker */}
+      <EnhancedMediaPicker
+        isOpen={showMediaPicker}
+        onClose={() => setShowMediaPicker(false)}
+        onSelect={handleMediaPickerSelect}
+        onMultiSelect={pickerMode === 'gallery' ? handleMediaPickerMultiSelect : undefined}
+        allowMultiple={pickerMode === 'gallery'}
+        allowUpload={true}
+        showFolders={true}
+      />
 
       {/* Projects List */}
       <div className="space-y-4">

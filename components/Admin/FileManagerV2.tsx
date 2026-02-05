@@ -72,6 +72,12 @@ const FileManagerV2: React.FC = () => {
     const quality = parseFloat(localStorage.getItem('jakub_minka_compression_quality') || '0.8');
     const fileList = Array.from(files) as File[];
     
+    console.log('📤 Upload started:', { 
+      filesCount: fileList.length, 
+      currentFolderId, 
+      currentFolderName: currentFolderId ? items.find(i => i.id === currentFolderId)?.name : 'kořen'
+    });
+    
     for (const file of fileList) {
       // Kontrola duplikátů - je soubor s tímto jménem již v systému?
       const fileName = file.name.split('.')[0];
@@ -135,6 +141,12 @@ const FileManagerV2: React.FC = () => {
           specializationId: storagePath,
           updatedAt: new Date().toISOString()
         };
+
+        console.log('💾 Saving item to database:', { 
+          name: newItem.name, 
+          parentId: newItem.parentId,
+          folderName: newItem.parentId ? items.find(i => i.id === newItem.parentId)?.name : 'kořen'
+        });
 
         await mediaDB.save(newItem);
         setUploadQueue(prev => prev.map(u => u.id === uploadId ? { ...u, status: 'completed', progress: 100 } : u));
@@ -266,28 +278,55 @@ const FileManagerV2: React.FC = () => {
   };
 
   const handleMoveToFolder = async (itemId: string, targetFolderId: string | null) => {
-    console.log('🔄 Starting move:', { itemId, targetFolderId });
+    console.log('🔄 Starting move:', { itemId, targetFolderId, timestamp: new Date().toISOString() });
+    
     try {
       const moveItem = items.find(i => i.id === itemId);
       if (!moveItem) {
+        console.error('❌ Item not found in current items:', itemId);
         throw new Error('Item not found');
       }
       
-      const result = await mediaDB.update(itemId, { parentId: targetFolderId });
-      console.log('✅ Database move successful:', result);
+      console.log('📦 Item to move:', moveItem.name, 'Current parentId:', moveItem.parentId, 'Target parentId:', targetFolderId);
       
+      // Update in database
+      const result = await mediaDB.update(itemId, { parentId: targetFolderId });
+      console.log('✅ Database update response:', { success: !!result, data: result });
+      
+      if (!result) {
+        throw new Error('Database update failed - no response');
+      }
+      
+      // Close modal immediately
       setMoveToFolderId(null);
       setDraggedItem(null);
       setDragOverId(null);
       
       // Reload files from database
       const refreshedFiles = await mediaDB.getAll();
-      setItems(refreshedFiles.map(i => ({...i, parentId: i.parentId || null})));
-      console.log('✅ Files reloaded after move:', refreshedFiles.length, 'items');
+      console.log('🔄 Refreshed files from database:', refreshedFiles.length, 'items');
+      
+      setItems(refreshedFiles.map(i => ({
+        ...i,
+        parentId: i.parentId || null
+      })));
+      
+      // Show success message
+      const targetName = targetFolderId
+        ? items.find(i => i.id === targetFolderId)?.name || 'složka'
+        : 'kořen';
+      console.log('✅ Move completed:', moveItem.name, '→', targetName);
+      alert(`✓ "${moveItem.name}" přesunuto do "${targetName}"`);
       
     } catch (err) {
-      console.error('❌ Move error:', err);
-      alert('Chyba při přesunutí: ' + (err instanceof Error ? err.message : 'Neznámá chyba'));
+      console.error('❌ Move failed with error:', {
+        error: err instanceof Error ? err.message : String(err),
+        itemId,
+        targetFolderId,
+        timestamp: new Date().toISOString()
+      });
+      setMoveToFolderId(null);
+      alert('❌ Chyba při přesunutí: ' + (err instanceof Error ? err.message : 'Neznámá chyba'));
     }
   };
 
@@ -414,7 +453,10 @@ const FileManagerV2: React.FC = () => {
             <div key={folder.id} className="flex items-center gap-2">
               <ChevronRight size={14} className="text-gray-300" />
               <button 
-                onClick={() => setCurrentFolderId(folder.id)}
+                onClick={() => {
+                  console.log('📁 Breadcrumb folder clicked:', folder.name, 'id:', folder.id);
+                  setCurrentFolderId(folder.id);
+                }}
                 className="hover:text-[#007BFF] transition-colors"
               >
                 {folder.name}
@@ -501,7 +543,14 @@ const FileManagerV2: React.FC = () => {
                   className={`relative flex flex-col items-center gap-3 p-3 border-2 rounded hover:border-[#007BFF] transition-all cursor-pointer bg-gray-50 hover:bg-white h-full ${
                     dragOverId === item.id && item.type === 'folder' ? 'border-[#007BFF] bg-blue-50' : 'border-gray-100'
                   }`}
-                  onClick={() => item.type === 'folder' ? setCurrentFolderId(item.id) : setPreviewIndex(previewItems.findIndex(pi => pi.id === item.id))}
+                  onClick={() => {
+                    if (item.type === 'folder') {
+                      console.log('📁 Grid folder clicked:', item.name, 'id:', item.id);
+                      setCurrentFolderId(item.id);
+                    } else {
+                      setPreviewIndex(previewItems.findIndex(pi => pi.id === item.id));
+                    }
+                  }}
                   onContextMenu={(e) => handleContextMenu(e, item.id)}
                   draggable={item.type !== 'folder'}
                   onDragStart={(e) => item.type !== 'folder' && handleDragStart(e, item.id)}
