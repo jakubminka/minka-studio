@@ -111,33 +111,40 @@ const ProjectManagerV2: React.FC = () => {
   const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files?.[0]) return;
     const file = e.target.files[0];
+    
+    // Check if file with same name already exists in media gallery
+    const existingMediaItems = await mediaDB.getAll();
+    const fileBaseName = file.name.split('.')[0];
+    const existingByName = existingMediaItems.find(item => 
+      item.name === fileBaseName && item.type === 'image'
+    );
+    
+    if (existingByName) {
+      // Reuse existing image
+      setFormData(p => ({ ...p, thumbnailUrl: existingByName.url, thumbnailSource: 'storage' }));
+      console.log('🔄 File already exists in media gallery, reusing:', existingByName.name);
+      return;
+    }
+    
     setIsProcessing(true);
     try {
       const quality = parseFloat(localStorage.getItem('jakub_minka_compression_quality') || '0.8');
       const webpBlob = await convertToWebP(file, quality);
       const url = await uploadFileToStorage(webpBlob, file.name);
       
-      // Check if this URL already exists in media gallery
-      const existingMediaItems = await mediaDB.getAll();
-      const exists = existingMediaItems.find(item => item.url === url);
-      
-      if (!exists) {
-        // Add to media gallery
-        const mediaItem: FileItem = {
-          id: 'm-' + Math.random().toString(36).substr(2, 9),
-          name: file.name.split('.')[0],
-          type: 'image',
-          size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
-          url,
-          parentId: null,
-          specializationId: '',
-          updatedAt: new Date().toISOString()
-        };
-        await mediaDB.save(mediaItem);
-        console.log('✅ Thumbnail added to media gallery:', mediaItem.name);
-      } else {
-        console.log('🔄 Thumbnail already exists in media gallery, reusing');
-      }
+      // Add to media gallery (we already checked it doesn't exist)
+      const mediaItem: FileItem = {
+        id: 'm-' + Math.random().toString(36).substr(2, 9),
+        name: fileBaseName,
+        type: 'image',
+        size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+        url,
+        parentId: null,
+        specializationId: '',
+        updatedAt: new Date().toISOString()
+      };
+      await mediaDB.save(mediaItem);
+      console.log('✅ Thumbnail added to media gallery:', mediaItem.name);
       
       setFormData(p => ({ ...p, thumbnailUrl: url, thumbnailSource: 'storage' }));
     } catch (err) {
@@ -159,32 +166,48 @@ const ProjectManagerV2: React.FC = () => {
 
     for (const file of files) {
       const uploadId = Math.random().toString(36).substr(2, 9);
+      const fileBaseName = file.name.split('.')[0];
+      
+      // Check if file with same name already exists
+      const existingByName = existingMediaItems.find(item => 
+        item.name === fileBaseName && item.type === 'image'
+      );
+      
+      if (existingByName) {
+        // Reuse existing image
+        console.log('🔄 Gallery image already exists, reusing:', existingByName.name);
+        const galleryItem: GalleryItem = {
+          id: 'g-' + uploadId,
+          url: existingByName.url,
+          type: 'image',
+          source: 'storage'
+        };
+        setFormData(p => ({
+          ...p,
+          gallery: [...(p.gallery || []), galleryItem]
+        }));
+        continue;
+      }
+      
       setUploads(prev => [...prev, { id: uploadId, name: file.name, progress: 0 }]);
 
       try {
         const webpBlob = await convertToWebP(file, quality);
         const url = await uploadFileToStorage(webpBlob, file.name);
 
-        // Check if this URL already exists in media gallery
-        const exists = existingMediaItems.find(item => item.url === url);
-        
-        if (!exists) {
-          // Add to media gallery
-          const mediaItem: FileItem = {
-            id: 'm-' + uploadId,
-            name: file.name.split('.')[0],
-            type: 'image',
-            size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
-            url,
-            parentId: null,
-            specializationId: '',
-            updatedAt: new Date().toISOString()
-          };
-          await mediaDB.save(mediaItem);
-          console.log('✅ Gallery image added to media gallery:', mediaItem.name);
-        } else {
-          console.log('🔄 Gallery image already exists in media gallery, reusing');
-        }
+        // Add to media gallery (we already checked it doesn't exist)
+        const mediaItem: FileItem = {
+          id: 'm-' + uploadId,
+          name: fileBaseName,
+          type: 'image',
+          size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+          url,
+          parentId: null,
+          specializationId: '',
+          updatedAt: new Date().toISOString()
+        };
+        await mediaDB.save(mediaItem);
+        console.log('✅ Gallery image added to media gallery:', mediaItem.name);
 
         const galleryItem: GalleryItem = {
           id: 'g-' + uploadId,
