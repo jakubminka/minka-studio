@@ -31,6 +31,26 @@ const ProjectDetail: React.FC = () => {
     load();
   }, [id, navigate]);
 
+  // Keyboard navigation in lightbox
+  useEffect(() => {
+    if (activeLightboxIndex === null || !project?.gallery) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        setActiveLightboxIndex(activeLightboxIndex === 0 ? project.gallery!.length - 1 : activeLightboxIndex - 1);
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        setActiveLightboxIndex(activeLightboxIndex === project.gallery!.length - 1 ? 0 : activeLightboxIndex + 1);
+      } else if (e.key === 'Escape') {
+        setActiveLightboxIndex(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeLightboxIndex, project]);
+
   const getMediaColor = (type: MediaType) => {
     switch (type) {
       case MediaType.VIDEO: return 'bg-[#FF3B30]';
@@ -127,8 +147,38 @@ const ProjectDetail: React.FC = () => {
 
       <AnimatePresence>
         {activeLightboxIndex !== null && project.gallery && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center bg-white/95 backdrop-blur-3xl p-4" onClick={() => setActiveLightboxIndex(null)}>
-            <button className="absolute top-10 right-10 text-black/50 hover:text-black transition-colors" onClick={() => setActiveLightboxIndex(null)}><X size={48} /></button>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-3xl p-4" onClick={() => setActiveLightboxIndex(null)}>
+            <button className="absolute top-10 right-10 text-white/50 hover:text-white transition-colors z-50" onClick={() => setActiveLightboxIndex(null)}><X size={48} /></button>
+            
+            {/* Counter */}
+            <div className="absolute top-10 left-10 text-white/70 font-black text-sm uppercase tracking-widest z-50">
+              {activeLightboxIndex + 1} / {project.gallery.length}
+            </div>
+            
+            {/* Left Arrow */}
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveLightboxIndex(activeLightboxIndex === 0 ? project.gallery!.length - 1 : activeLightboxIndex - 1);
+              }}
+              className="absolute left-10 top-1/2 -translate-y-1/2 p-4 hover:bg-white/10 rounded-full text-white transition-all z-50"
+              title="Předchozí"
+            >
+              <ChevronLeft size={36} />
+            </button>
+
+            {/* Right Arrow */}
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveLightboxIndex(activeLightboxIndex === project.gallery!.length - 1 ? 0 : activeLightboxIndex + 1);
+              }}
+              className="absolute right-10 top-1/2 -translate-y-1/2 p-4 hover:bg-white/10 rounded-full text-white transition-all z-50"
+              title="Další"
+            >
+              <ChevronRight size={36} />
+            </button>
+
             <div className="w-full h-full flex items-center justify-center max-w-7xl mx-auto" onClick={e => e.stopPropagation()}>
                {project.gallery[activeLightboxIndex].type === 'video' ? (
                  <video src={project.gallery[activeLightboxIndex].url} autoPlay controls className="max-w-full max-h-[90vh] object-contain shadow-2xl" />

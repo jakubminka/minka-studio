@@ -113,13 +113,13 @@ const Home: React.FC = () => {
         <div className="absolute inset-0 z-0 h-full w-full">
           {heroProjects.length > 0 ? heroProjects.map((project, idx) => (
             <div key={`bg-${project.id}`} className={`absolute inset-0 h-full w-full transition-opacity duration-[1500ms] ease-in-out ${idx === currentSlide ? 'opacity-100' : 'opacity-0'}`}>
-              <div className="absolute inset-0 bg-gradient-to-b from-[#0A192F]/60 to-[#0A192F]/90 z-10"></div>
-              <img src={project.thumbnailUrl} alt="" className="w-full h-full object-cover grayscale opacity-60" />
+              <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-black/60 z-10"></div>
+              <img src={project.thumbnailUrl} alt="" className="w-full h-full object-cover" />
             </div>
           )) : (
             <div className="absolute inset-0 h-full w-full">
-              <div className="absolute inset-0 bg-[#0A192F] z-10 opacity-80"></div>
-              <img src={settings.homeHeader || 'https://images.unsplash.com/photo-1492724441997-5dc865305da7?auto=format&fit=crop&q=80&w=2000'} className="w-full h-full object-cover grayscale" />
+              <div className="absolute inset-0 bg-black/50 z-10"></div>
+              <img src={settings.homeHeader || 'https://images.unsplash.com/photo-1492724441997-5dc865305da7?auto=format&fit=crop&q=80&w=2000'} className="w-full h-full object-cover" />
             </div>
           )}
         </div>
