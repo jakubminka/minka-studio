@@ -15,6 +15,8 @@ import NotFound from './pages/NotFound';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import CookieBar from './components/CookieBar';
+import React, { useState, useEffect, useMemo } from 'react'; // Přidáno useEffect, useState
+import { supabase } from './supabaseClient'; // Cesta k souboru, co jsme vytvořili
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
