@@ -29,11 +29,16 @@ CREATE TABLE IF NOT EXISTS inquiries (
 CREATE TABLE IF NOT EXISTS projects (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
+  short_description TEXT,
   description TEXT,
-  image_url TEXT,
-  project_url TEXT,
-  tags TEXT[],
-  date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  category TEXT,
+  category_id TEXT,
+  type TEXT,
+  date TIMESTAMP,
+  thumbnail_url TEXT,
+  thumbnail_source TEXT,
+  gallery JSONB,
+  services_delivered TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

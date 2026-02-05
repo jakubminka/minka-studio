@@ -6,7 +6,7 @@ import {
   GripVertical, ExternalLink, Eye, Download
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { mediaDB, dataStore, optimizeImage } from '../../lib/db';
+import { mediaDB, dataStore, projectDB, optimizeImage } from '../../lib/db';
 import { supabase } from '../../src/supabaseClient';
 
 const ProjectManagerV2: React.FC = () => {
@@ -42,7 +42,7 @@ const ProjectManagerV2: React.FC = () => {
   // Load projects and media
   useEffect(() => {
     const load = async () => {
-      const savedProjects = await dataStore.collection('projects').getAll();
+      const savedProjects = await projectDB.getAll();
       setProjects(savedProjects);
       const savedMedia = await mediaDB.getAll();
       setAllMediaItems(savedMedia);
@@ -230,12 +230,15 @@ const ProjectManagerV2: React.FC = () => {
         servicesDelivered: formData.servicesDelivered || ''
       };
 
-      await dataStore.collection('projects').save(project);
-      const updated = await dataStore.collection('projects').getAll();
+      await projectDB.save(project);
+      console.log('Project saved, reloading list...');
+      const updated = await projectDB.getAll();
+      console.log('Projects loaded:', updated);
       setProjects(updated);
       setShowForm(false);
       resetForm();
     } catch (err) {
+      console.error('Save error:', err);
       alert('Error saving project: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setIsProcessing(false);
@@ -266,9 +269,14 @@ const ProjectManagerV2: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Smazat projekt?')) return;
-    await dataStore.collection('projects').delete(id);
-    const updated = await dataStore.collection('projects').getAll();
-    setProjects(updated);
+    try {
+      await projectDB.delete(id);
+      const updated = await projectDB.getAll();
+      setProjects(updated);
+    } catch (err) {
+      console.error('Delete error:', err);
+      alert('Error deleting project');
+    }
   };
 
   const filteredProjects = projects.filter(p =>

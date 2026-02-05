@@ -268,3 +268,104 @@ export class MediaDB {
 }
 
 export const mediaDB = new MediaDB();
+
+export class ProjectDB {
+  private cacheKey = 'jakub_minka_projects_cache';
+
+  // Convert camelCase to snake_case for database
+  private toSnakeCase(item: any) {
+    return {
+      id: item.id,
+      title: item.title,
+      short_description: item.shortDescription,
+      description: item.description,
+      category: item.category,
+      category_id: item.categoryId,
+      type: item.type,
+      date: item.date,
+      thumbnail_url: item.thumbnailUrl,
+      thumbnail_source: item.thumbnailSource,
+      gallery: item.gallery,
+      services_delivered: item.servicesDelivered,
+      updated_at: new Date().toISOString(),
+      created_at: item.created_at || new Date().toISOString()
+    };
+  }
+
+  // Convert snake_case from database to camelCase for frontend
+  private toCamelCase(item: any) {
+    return {
+      id: item.id,
+      title: item.title,
+      shortDescription: item.short_description,
+      description: item.description,
+      category: item.category,
+      categoryId: item.category_id,
+      type: item.type,
+      date: item.date,
+      thumbnailUrl: item.thumbnail_url,
+      thumbnailSource: item.thumbnail_source,
+      gallery: item.gallery,
+      servicesDelivered: item.services_delivered,
+      created_at: item.created_at,
+      updated_at: item.updated_at
+    };
+  }
+
+  async getAll(): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .order('date', { ascending: false });
+      
+      if (error) throw error;
+      const items = (data || []).map(item => this.toCamelCase(item));
+      localStorage.setItem(this.cacheKey, JSON.stringify(items));
+      return items;
+    } catch (e) {
+      console.error("Project getAll error:", e);
+      return JSON.parse(localStorage.getItem(this.cacheKey) || '[]');
+    }
+  }
+
+  async save(item: any): Promise<void> {
+    const current = JSON.parse(localStorage.getItem(this.cacheKey) || '[]');
+    localStorage.setItem(this.cacheKey, JSON.stringify([item, ...current.filter((i: any) => i.id !== item.id)]));
+    
+    try {
+      const dbItem = this.toSnakeCase(item);
+      console.log('Saving project to DB:', dbItem);
+      const { error } = await supabase
+        .from('projects')
+        .upsert([dbItem], { onConflict: 'id' });
+      
+      if (error) throw error;
+      console.log('Project saved successfully');
+    } catch (e) {
+      console.error("Project save error:", e);
+      throw e;
+    }
+    window.dispatchEvent(new Event('storage'));
+  }
+
+  async delete(id: string): Promise<void> {
+    const current = JSON.parse(localStorage.getItem(this.cacheKey) || '[]');
+    localStorage.setItem(this.cacheKey, JSON.stringify(current.filter((i: any) => i.id !== id)));
+
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+    } catch (e) {
+      console.error("Project delete error:", e);
+      throw e;
+    }
+    window.dispatchEvent(new Event('storage'));
+  }
+}
+
+export const projectDB = new ProjectDB();
