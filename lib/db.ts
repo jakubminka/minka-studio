@@ -426,7 +426,7 @@ export class ProjectDB {
       thumbnail_source: item.thumbnailSource,
       gallery: item.gallery,
       services_delivered: item.servicesDelivered,
-      youtube_url: item.youtubeUrl,
+      youtube_url: item.youtubeUrl || '',
       updated_at: new Date().toISOString(),
       created_at: item.created_at || new Date().toISOString()
     };

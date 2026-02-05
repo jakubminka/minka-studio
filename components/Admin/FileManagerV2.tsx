@@ -247,6 +247,48 @@ const FileManagerV2: React.FC = () => {
     }
   };
 
+  const handleBulkMove = async (targetFolderId: string | null) => {
+    if (selectedIds.size === 0) return;
+
+    try {
+      console.log('🔄 [BULK MOVE] Moving', selectedIds.size, 'items to folder:', targetFolderId);
+      let errorMessages: string[] = [];
+
+      for (const id of selectedIds) {
+        const item = items.find(i => i.id === id);
+        if (!item) continue;
+
+        try {
+          await mediaDB.update(id, { parentId: targetFolderId });
+          console.log('✅ [BULK MOVE] Moved:', item.name);
+        } catch (err) {
+          console.error(`❌ [BULK MOVE] Error moving ${item.name}:`, err);
+          errorMessages.push(item.name);
+        }
+      }
+
+      setMoveToFolderId(null);
+      setSelectedIds(new Set());
+      
+      // Reload all files
+      const refreshedFiles = await mediaDB.getAll();
+      setItems(refreshedFiles.map(i => ({...i, parentId: i.parentId || null})));
+
+      const targetName = targetFolderId
+        ? refreshedFiles.find(i => i.id === targetFolderId)?.name || 'složka'
+        : 'kořen';
+      
+      if (errorMessages.length === 0) {
+        alert(`✓ Přesunuto ${selectedIds.size} položek do "${targetName}"`);
+      } else {
+        alert(`Částečně dokončeno. Některé položky se nepodařilo přesunout: ${errorMessages.join(', ')}`);
+      }
+    } catch (err) {
+      console.error('❌ [BULK MOVE] Bulk move error:', err);
+      alert('Chyba při hromadném přesouvání: ' + (err instanceof Error ? err.message : 'Neznámá chyba'));
+    }
+  };
+
   const handleDragStart = (e: React.DragEvent, itemId: string) => {
     setDraggedItem(itemId);
     if (e.dataTransfer) {
@@ -552,12 +594,33 @@ const FileManagerV2: React.FC = () => {
           </button>
 
           {/* Bulk Actions */}
-          {selectedIds.size > 0 && (
+          {selectedIds.size === 0 ? (
             <button 
-              onClick={() => setShowBulkDelete(true)}
-              className="px-6 py-2 bg-red-500 text-white text-[10px] font-black uppercase rounded hover:bg-red-600 transition-all flex items-center gap-2"
+              onClick={() => setSelectedIds(new Set(currentItems.map(i => i.id)))}
+              className="px-6 py-2 border-2 border-gray-300 text-gray-600 text-[10px] font-black uppercase rounded hover:border-[#007BFF] hover:text-[#007BFF] transition-all flex items-center gap-2"
+              title="Vybrat vše v aktuální složce"
             >
-              <Trash2 size={14} /> Smazat {selectedIds.size}
+              <CheckSquare size={14} /> Vybrat vše
+            </button>
+          ) : (
+            <>
+              <button 
+                onClick={() => setSelectedIds(new Set())}
+                className="px-6 py-2 border-2 border-gray-300 text-gray-600 text-[10px] font-black uppercase rounded hover:border-orange-500 hover:text-orange-500 transition-all flex items-center gap-2"
+              >
+                <Square size={14} /> Odznačit ({selectedIds.size})
+              </button>
+              <button 
+                onClick={() => setMoveToFolderId('__select__')}
+                className="px-6 py-2 bg-[#007BFF] text-white text-[10px] font-black uppercase rounded hover:bg-blue-700 transition-all flex items-center gap-2"
+              >
+                <Move size={14} /> Přesunout {selectedIds.size}
+              </button>
+              <button 
+                onClick={() => setShowBulkDelete(true)}
+                className="px-6 py-2 bg-red-500 text-white text-[10px] font-black uppercase rounded hover:bg-red-600 transition-all flex items-center gap-2"
+              >
+                <Trash2 size={14} /> Smazat {selectedIds.size}
             </button>
           )}
         </div>
