@@ -71,16 +71,24 @@ const Contact: React.FC = () => {
     setIsVerificationOpen(false);
     setFormState('loading');
     setTimeout(async () => {
-      const newInquiry = { 
-        id: Math.random().toString(36).substr(2, 9), 
-        ...formData, 
-        date: new Date().toISOString(), 
-        status: 'new' 
-      };
-      await dataStore.collection('inquiries').save(newInquiry);
-      setFormState('success');
-      setFormData({ name: '', email: '', subject: '', message: '' });
-      setTimeout(() => setFormState('idle'), 5000);
+      try {
+        const newInquiry = { 
+          id: Math.random().toString(36).substr(2, 9), 
+          name: formData.name,
+          email: formData.email,
+          message: `${formData.subject}\n\n${formData.message}`,
+          date: new Date().toISOString(), 
+          status: 'new' 
+        };
+        await dataStore.collection('inquiries').save(newInquiry);
+        setFormState('success');
+        setFormData({ name: '', email: '', subject: '', message: '' });
+        setTimeout(() => setFormState('idle'), 5000);
+      } catch (error) {
+        console.error('Error sending inquiry:', error);
+        alert('Chyba při odesílání zprávy. Zkuste to znovu.');
+        setFormState('idle');
+      }
     }, 1500);
   };
 
