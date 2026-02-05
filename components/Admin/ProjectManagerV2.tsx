@@ -113,7 +113,9 @@ const ProjectManagerV2: React.FC = () => {
     
     // Load existing media to check for duplicates BEFORE starting
     const existingMediaItems = await mediaDB.getAll();
-    const duplicates: string[] = [];
+    const currentGalleryUrls = (formData.gallery || []).map(item => item.url);
+    const duplicatesInMedia: string[] = [];
+    const duplicatesInGallery: string[] = [];
     const filesToUpload: File[] = [];
     
     for (const file of files) {
@@ -123,27 +125,23 @@ const ProjectManagerV2: React.FC = () => {
       );
       
       if (existingByName) {
-        duplicates.push(file.name);
-        // Reuse existing image immediately
-        const uploadId = Math.random().toString(36).substr(2, 9);
-        const galleryItem: GalleryItem = {
-          id: 'g-' + uploadId,
-          url: existingByName.url,
-          type: 'image',
-          source: 'storage'
-        };
-        setFormData(p => ({
-          ...p,
-          gallery: [...(p.gallery || []), galleryItem]
-        }));
+        // Check if already in current project gallery
+        if (currentGalleryUrls.includes(existingByName.url)) {
+          duplicatesInGallery.push(file.name);
+        } else {
+          duplicatesInMedia.push(file.name);
+        }
       } else {
         filesToUpload.push(file);
       }
     }
     
-    // Show warning if duplicates found
-    if (duplicates.length > 0) {
-      alert(`⚠️ Následující soubory již existují v galerii a budou znovu použity:\n${duplicates.join('\n')}`);
+    // Show error if duplicates found
+    if (duplicatesInGallery.length > 0) {
+      alert(`❌ Následující soubory již jsou v galerii tohoto projektu:\n${duplicatesInGallery.join('\n')}\n\nNebude přidáno.`);
+    }
+    if (duplicatesInMedia.length > 0) {
+      alert(`❌ Následující soubory již existují v hlavní galerii médií:\n${duplicatesInMedia.join('\n')}\n\nPoužijte "Přidat z knihovny" pro přidání existujících souborů.`);
     }
     
     // If no new files to upload, we're done
@@ -207,13 +205,35 @@ const ProjectManagerV2: React.FC = () => {
 
   // Callback for media picker - multiple selection (gallery)
   const handleMediaPickerMultiSelect = (items: FileItem[]) => {
-    const newGalleryItems = items.map(m => ({
-      id: m.id,
-      url: m.url,
-      type: m.type as any,
-      source: 'storage' as const
-    }));
-    setFormData(p => ({ ...p, gallery: [...(p.gallery || []), ...newGalleryItems] }));
+    const currentGalleryUrls = (formData.gallery || []).map(item => item.url);
+    const duplicates: string[] = [];
+    const newItems: FileItem[] = [];
+    
+    // Filter out duplicates
+    items.forEach(item => {
+      if (currentGalleryUrls.includes(item.url)) {
+        duplicates.push(item.name);
+      } else {
+        newItems.push(item);
+      }
+    });
+    
+    // Show warning if duplicates found
+    if (duplicates.length > 0) {
+      alert(`❌ Následující položky již jsou v galerii projektu:\n${duplicates.join('\n')}\n\nNebudou přidány.`);
+    }
+    
+    // Add only new items
+    if (newItems.length > 0) {
+      const newGalleryItems = newItems.map(m => ({
+        id: m.id,
+        url: m.url,
+        type: m.type as any,
+        source: 'storage' as const
+      }));
+      setFormData(p => ({ ...p, gallery: [...(p.gallery || []), ...newGalleryItems] }));
+    }
+    
     setShowMediaPicker(false);
   };
 
@@ -223,13 +243,35 @@ const ProjectManagerV2: React.FC = () => {
       .map(id => allMediaItems.find(m => m.id === id))
       .filter(Boolean) as FileItem[];
 
-    const newGalleryItems = picked.map(m => ({
-      id: m.id,
-      url: m.url,
-      type: m.type as any,
-      source: 'storage' as const
-    }));
-    setFormData(p => ({ ...p, gallery: [...(p.gallery || []), ...newGalleryItems] }));
+    const currentGalleryUrls = (formData.gallery || []).map(item => item.url);
+    const duplicates: string[] = [];
+    const newItems: FileItem[] = [];
+    
+    // Filter out duplicates
+    picked.forEach(item => {
+      if (currentGalleryUrls.includes(item.url)) {
+        duplicates.push(item.name);
+      } else {
+        newItems.push(item);
+      }
+    });
+    
+    // Show warning if duplicates found
+    if (duplicates.length > 0) {
+      alert(`❌ Následující položky již jsou v galerii projektu:\n${duplicates.join('\n')}\n\nNebudou přidány.`);
+    }
+    
+    // Add only new items
+    if (newItems.length > 0) {
+      const newGalleryItems = newItems.map(m => ({
+        id: m.id,
+        url: m.url,
+        type: m.type as any,
+        source: 'storage' as const
+      }));
+      setFormData(p => ({ ...p, gallery: [...(p.gallery || []), ...newGalleryItems] }));
+    }
+    
     setShowMediaPicker(false);
     setSelectedMedia(new Set());
   };
