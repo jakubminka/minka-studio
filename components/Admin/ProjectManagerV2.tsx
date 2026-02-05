@@ -3,7 +3,7 @@ import { Project, MediaType, FileItem, GalleryItem } from '../../types';
 import { SPECIALIZATIONS } from '../../constants';
 import { 
   Plus, Trash2, Edit2, X, Search, Youtube, Upload, RefreshCw, CheckSquare, Square,
-  GripVertical, ExternalLink, Eye, Download
+  GripVertical, ExternalLink, Eye, Download, Grid3x3, List, Filter, SortAsc
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { mediaDB, dataStore, projectDB, optimizeImage } from '../../lib/db';
@@ -17,6 +17,9 @@ const ProjectManagerV2: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploads, setUploads] = useState<{id: string, name: string, progress: number}[]>([]);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [sortBy, setSortBy] = useState<'date' | 'title' | 'category'>('date');
+  const [filterCategory, setFilterCategory] = useState<string>('all');
   
   const [allMediaItems, setAllMediaItems] = useState<FileItem[]>([]);
   const [showMediaPicker, setShowMediaPicker] = useState(false);
@@ -407,20 +410,89 @@ const ProjectManagerV2: React.FC = () => {
       console.error('Delete error:', err);
       alert('Error deleting project');
     }
-  };
+    .filter(p =>
+      (p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+       p.shortDescription?.toLowerCase().includes(searchQuery.toLowerCase())) &&
+      (filterCategory === 'all' || p.categoryId === filterCategory)
+    )
+    .sort((a, b) => {
+      if (sortBy === 'date') {
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
+      } else if (sortBy === 'title') {
+        return a.title.localeCompare(b.title);
+      } else if (sortBy === 'category') {shadow-sm space-y-4">
+        <div className="flex justify-between items-center">
+          <button
+            onClick={() => { resetForm(); setShowForm(true); }}
+            className="bg-[#007BFF] text-white px-8 py-3.5 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all"
+          >
+            <Plus className="inline mr-2" size={16} /> PŘIDAT ZAKÁZKU
+          </button>
+          <div className="relative">
+            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="HLEDAT..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="pl-12 pr-6 py-3 border text-[10px] font-black w-64 uppercase bg-white text-black"
+            />
+          </div>
+        </div>
 
-  const filteredProjects = projects.filter(p =>
-    p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.shortDescription?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+        {/* Filters & Controls */}
+        <div className="flex flex-wrap items-center gap-4 pt-4 border-t">
+          {/* View Mode Toggle */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`p-2 rounded ${viewMode === 'grid' ? 'bg-[#007BFF] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              title="Mřížka"
+            >
+              <Grid3x3 size={18} />
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`p-2 rounded ${viewMode === 'list' ? 'bg-[#007BFF] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              title="Seznam"
+            >
+              <List size={18} />
+            </button>
+          </div>
 
-  return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="bg-white p-6 border flex justify-between items-center shadow-sm">
-        <button
-          onClick={() => { resetForm(); setShowForm(true); }}
-          className="bg-[#007BFF] text-white px-8 py-3.5 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all"
+          {/* Category Filter */}
+          <div className="flex items-center gap-2">
+            <Filter size={16} className="text-gray-400" />
+            <select
+              value={filterCategory}
+              onChange={e => setFilterCategory(e.target.value)}
+              className="border px-3 py-2 text-[10px] font-black uppercase bg-white text-black rounded"
+            >
+              <option value="all">Všechny kategorie</option>
+              {SPECIALIZATIONS.map(s => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Sort By */}
+          <div className="flex items-center gap-2">
+            <SortAsc size={16} className="text-gray-400" />
+            <select
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value as any)}
+              className="border px-3 py-2 text-[10px] font-black uppercase bg-white text-black rounded"
+            >
+              <option value="date">Datum (nejnovější)</option>
+              <option value="title">Název (A-Z)</option>
+              <option value="category">Kategorie</option>
+            </select>
+          </div>
+
+          {/* Count */}
+          <div className="ml-auto text-[10px] font-black uppercase text-gray-400 tracking-widest">
+            {filteredProjects.length} / {projects.length} zakázek
+          </divlassName="bg-[#007BFF] text-white px-8 py-3.5 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all"
         >
           <Plus className="inline mr-2" size={16} /> PŘIDAT ZAKÁZKU
         </button>
@@ -723,56 +795,126 @@ const ProjectManagerV2: React.FC = () => {
         showFolders={true}
       />
 
-      {/* Projects List */}
-      <div className="space-y-4">
-        {filteredProjects.length === 0 ? (
-          <div className="text-center py-20 text-gray-400">
-            <p className="text-[12px] font-black uppercase tracking-widest">Žádné projekty</p>
-          </div>
-        ) : (
-          filteredProjects.map(project => (
-            <motion.div
-              key={project.id}
-              layout
-              className="bg-white border border-gray-200 p-6 flex gap-6 items-start"
-            >
-              <div className="w-24 h-24 rounded overflow-hidden flex-shrink-0 bg-gray-100">
-                {project.thumbnailUrl ? (
-                  <img src={project.thumbnailUrl} alt={project.title} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-300">Bez obrázku</div>
-                )}
-              </div>
+      {/* Projects Grid/List */}
+      {viewMode === 'grid' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredProjects.length === 0 ? (
+            <div className="col-span-full text-center py-20 text-gray-400">
+              <p className="text-[12px] font-black uppercase tracking-widest">Žádné projekty</p>
+            </div>
+          ) : (
+            filteredProjects.map(project => (
+              <motion.div
+                key={project.id}
+                layout
+                className="bg-white border border-gray-200 rounded overflow-hidden group hover:shadow-xl transition-all"
+              >
+                <div className="aspect-video bg-gray-100 relative overflow-hidden">
+                  {project.thumbnailUrl ? (
+                    <img 
+                      src={project.thumbnailUrl} 
+                      alt={project.title} 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-300 text-sm">
+                      Bez obrázku
+                    </div>
+                  )}
+                  <div className="absolute top-2 right-2 flex gap-1">
+                    <button
+                      onClick={() => handleEdit(project)}
+                      className="p-2 bg-white/90 hover:bg-[#007BFF] hover:text-white rounded shadow-lg transition-all"
+                      title="Upravit"
+                    >
+                      <Edit2 size={14} />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(project.id)}
+                      className="p-2 bg-white/90 hover:bg-red-500 hover:text-white rounded shadow-lg transition-all"
+                      title="Smazat"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
 
-              <div className="flex-1 min-w-0">
-                <h3 className="text-lg font-black uppercase tracking-widest mb-1">{project.title}</h3>
-                <p className="text-[11px] text-gray-500 uppercase tracking-widest mb-2">{project.category} • {new Date(project.date).toLocaleDateString('cs-CZ')}</p>
-                <p className="text-sm text-gray-600 line-clamp-2">{project.shortDescription || project.description?.substring(0, 100)}</p>
-                {project.gallery && (
-                  <p className="text-[10px] text-gray-400 mt-2">📸 {project.gallery.length} položek v galerii</p>
-                )}
-              </div>
+                <div className="p-4">
+                  <h3 className="text-sm font-black uppercase tracking-wider mb-1 line-clamp-1">
+                    {project.title}
+                  </h3>
+                  <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-2">
+                    {project.category}
+                  </p>
+                  <p className="text-xs text-gray-600 line-clamp-2 mb-3">
+                    {project.shortDescription || project.description?.substring(0, 80)}
+                  </p>
+                  <div className="flex items-center justify-between text-[9px] text-gray-400 uppercase tracking-widest">
+                    <span>{new Date(project.date).toLocaleDateString('cs-CZ')}</span>
+                    {project.gallery && (
+                      <span>📸 {project.gallery.length}</span>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            ))
+          )}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {filteredProjects.length === 0 ? (
+            <div className="text-center py-20 text-gray-400">
+              <p className="text-[12px] font-black uppercase tracking-widest">Žádné projekty</p>
+            </div>
+          ) : (
+            filteredProjects.map(project => (
+              <motion.div
+                key={project.id}
+                layout
+                className="bg-white border border-gray-200 p-6 flex gap-6 items-start hover:shadow-lg transition-shadow"
+              >
+                <div className="w-24 h-24 rounded overflow-hidden flex-shrink-0 bg-gray-100">
+                  {project.thumbnailUrl ? (
+                    <img src={project.thumbnailUrl} alt={project.title} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">Bez obrázku</div>
+                  )}
+                </div>
 
-              <div className="flex gap-2 flex-shrink-0">
-                <button
-                  onClick={() => handleEdit(project)}
-                  className="p-2 hover:bg-blue-100 rounded text-[#007BFF]"
-                  title="Upravit"
-                >
-                  <Edit2 size={18} />
-                </button>
-                <button
-                  onClick={() => handleDelete(project.id)}
-                  className="p-2 hover:bg-red-100 rounded text-red-500"
-                  title="Smazat"
-                >
-                  <Trash2 size={18} />
-                </button>
-              </div>
-            </motion.div>
-          ))
-        )}
-      </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-lg font-black uppercase tracking-widest mb-1">{project.title}</h3>
+                  <p className="text-[11px] text-gray-500 uppercase tracking-widest mb-2">
+                    {project.category} • {new Date(project.date).toLocaleDateString('cs-CZ')}
+                  </p>
+                  <p className="text-sm text-gray-600 line-clamp-2">
+                    {project.shortDescription || project.description?.substring(0, 100)}
+                  </p>
+                  {project.gallery && (
+                    <p className="text-[10px] text-gray-400 mt-2">📸 {project.gallery.length} položek v galerii</p>
+                  )}
+                </div>
+
+                <div className="flex gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => handleEdit(project)}
+                    className="p-2 hover:bg-blue-100 rounded text-[#007BFF]"
+                    title="Upravit"
+                  >
+                    <Edit2 size={18} />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(project.id)}
+                    className="p-2 hover:bg-red-100 rounded text-red-500"
+                    title="Smazat"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              </motion.div>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 };

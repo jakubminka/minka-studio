@@ -49,13 +49,33 @@ const EnhancedBlogEditor: React.FC<EnhancedBlogEditorProps> = ({
     // Simple markdown to HTML preview
     let html = markdown;
     
-    // Code blocks
+    // Code blocks (must be first to preserve their content)
     html = html.replace(/```[\s\S]*?```/g, (match) => {
       return `<pre class="bg-gray-900 text-gray-100 p-4 rounded font-mono text-sm overflow-auto my-4">${match.replace(/```/g, '')}</pre>`;
     });
 
-    // Inline code
+    // Inline code (before other inline processing)
     html = html.replace(/`([^`]+)`/g, '<code class="bg-gray-100 px-2 py-1 rounded font-mono text-sm">$1</code>');
+
+    // Images (BEFORE bold/italic which also use * and [])
+    html = html.replace(/!\[([^\]]*)\]\(([^\)]+)\)/g, '<img src="$2" alt="$1" class="max-w-full h-auto rounded my-4" />');
+
+    // Videos
+    html = html.replace(/<video[^>]*src="([^"]+)"[^>]*><\/video>/g, '<div class="my-4 rounded overflow-hidden"><video src="$1" controls class="w-full" /></div>');
+
+    // Lists (BEFORE bold/italic to prevent * confusion)
+    html = html.replace(/(^[\*\-] .+$(\n[\*\-] .+$)*)/gm, (match) => {
+      const items = match.split('\n').map(line => {
+        const text = line.replace(/^[\*\-] /, '').trim();
+        // Apply bold/italic within list items
+        return text
+          .replace(/\*\*\*([^\*]+)\*\*\*/g, '<strong><em>$1</em></strong>')
+          .replace(/\*\*([^\*]+)\*\*/g, '<strong>$1</strong>')
+          .replace(/\*([^\*]+)\*/g, '<em>$1</em>')
+          .replace(/_([^_]+)_/g, '<em>$1</em>');
+      });
+      return `<ul class="list-disc my-2">${items.map(item => `<li class="ml-6">${item}</li>`).join('')}</ul>`;
+    });
 
     // Blockquotes - process blocks of consecutive lines starting with >
     html = html.replace(/(^> .+$(\n> .+$)*)/gm, (match) => {
@@ -68,7 +88,7 @@ const EnhancedBlogEditor: React.FC<EnhancedBlogEditorProps> = ({
     html = html.replace(/^## (.*?)$/gm, '<h2 class="text-2xl font-black uppercase tracking-widest mt-8 mb-3">$1</h2>');
     html = html.replace(/^# (.*?)$/gm, '<h1 class="text-4xl font-black uppercase tracking-widest mt-10 mb-4">$1</h1>');
 
-    // Bold and italic
+    // Bold and italic (AFTER lists to avoid conflicts)
     html = html.replace(/\*\*\*([^\*]+)\*\*\*/g, '<strong><em>$1</em></strong>');
     html = html.replace(/\*\*([^\*]+)\*\*/g, '<strong>$1</strong>');
     html = html.replace(/\*([^\*]+)\*/g, '<em>$1</em>');
@@ -76,18 +96,6 @@ const EnhancedBlogEditor: React.FC<EnhancedBlogEditorProps> = ({
 
     // Links
     html = html.replace(/\[([^\]]+)\]\(([^\)]+)\)/g, '<a href="$2" class="text-[#007BFF] hover:underline" target="_blank">$1</a>');
-
-    // Images
-    html = html.replace(/!\[([^\]]*)\]\(([^\)]+)\)/g, '<img src="$2" alt="$1" class="max-w-full h-auto rounded my-4" />');
-
-    // Videos
-    html = html.replace(/<video[^>]*src="([^"]+)"[^>]*><\/video>/g, '<div class="my-4 rounded overflow-hidden"><video src="$1" controls class="w-full" /></div>');
-
-    // Lists - process blocks of consecutive lines starting with * or -
-    html = html.replace(/(^[\*\-] .+$(\n[\*\-] .+$)*)/gm, (match) => {
-      const items = match.split('\n').map(line => line.replace(/^[\*\-] /, '').trim());
-      return `<ul class="list-disc my-2">${items.map(item => `<li class="ml-6">${item}</li>`).join('')}</ul>`;
-    });
 
     // Line breaks to paragraphs
     html = html.split('\n\n').map(para => {

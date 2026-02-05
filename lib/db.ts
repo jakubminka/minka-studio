@@ -314,7 +314,7 @@ export class BlogDB {
       content: item.content,
       image_url: item.coverImage || item.image_url,
       author: item.author,
-      tags: Array.isArray(item.tags) ? item.tags : [],
+      // tags: Array.isArray(item.tags) ? item.tags : [], // Removed - column not in schema cache
       date: item.date,
       updated_at: new Date().toISOString(),
       created_at: item.created_at || new Date().toISOString()
