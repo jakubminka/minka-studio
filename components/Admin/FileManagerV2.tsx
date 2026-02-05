@@ -621,7 +621,8 @@ const FileManagerV2: React.FC = () => {
                 className="px-6 py-2 bg-red-500 text-white text-[10px] font-black uppercase rounded hover:bg-red-600 transition-all flex items-center gap-2"
               >
                 <Trash2 size={14} /> Smazat {selectedIds.size}
-            </button>
+              </button>
+            </>
           )}
         </div>
       </div>
