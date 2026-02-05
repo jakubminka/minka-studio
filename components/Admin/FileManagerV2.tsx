@@ -923,6 +923,60 @@ const FileManagerV2: React.FC = () => {
             </motion.div>
           </motion.div>
         )}
+
+        {/* Bulk Delete Modal */}
+        {showBulkDelete && (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }}
+            onClick={() => setShowBulkDelete(false)}
+            className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6"
+          >
+            <motion.div 
+              initial={{ scale: 0.9 }} 
+              animate={{ scale: 1 }} 
+              exit={{ scale: 0.9 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-white rounded p-6 max-w-sm w-full space-y-4"
+            >
+              <div className="flex items-start gap-4">
+                <AlertCircle size={24} className="text-red-500 flex-shrink-0 mt-1" />
+                <div>
+                  <h3 className="text-lg font-black uppercase tracking-widest mb-2">Smazat vybrané?</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Opravdu chceš smazat <strong>{selectedIds.size}</strong> vybraných položek?
+                  </p>
+                  <div className="bg-gray-50 rounded p-3 max-h-32 overflow-y-auto text-xs space-y-1 mb-4">
+                    {Array.from(selectedIds).map(id => {
+                      const item = items.find(i => i.id === id);
+                      return item ? (
+                        <div key={id} className="text-gray-700 truncate">
+                          • {item.name}
+                        </div>
+                      ) : null;
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setShowBulkDelete(false)}
+                  className="flex-1 px-4 py-2 border border-gray-200 rounded hover:bg-gray-50 transition-all text-[10px] font-black uppercase"
+                >
+                  Zrušit
+                </button>
+                <button 
+                  onClick={handleBulkDelete}
+                  className="flex-1 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-all text-[10px] font-black uppercase"
+                >
+                  Smazat všechny
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
       </AnimatePresence>
 
       {/* Rename Modal */}
