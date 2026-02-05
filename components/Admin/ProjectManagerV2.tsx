@@ -238,8 +238,16 @@ const ProjectManagerV2: React.FC = () => {
       setShowForm(false);
       resetForm();
     } catch (err) {
+      let errorMsg = 'Neznámá chyba';
+      if (err instanceof Error) {
+        errorMsg = err.message;
+      } else if (typeof err === 'object' && err !== null) {
+        errorMsg = JSON.stringify(err);
+      } else {
+        errorMsg = String(err);
+      }
       console.error('Save error:', err);
-      alert('Error saving project: ' + (err instanceof Error ? err.message : String(err)));
+      alert('Chyba při ukládání: ' + errorMsg);
     } finally {
       setIsProcessing(false);
     }
