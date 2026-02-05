@@ -34,9 +34,14 @@ const BlogManagerV2: React.FC = () => {
   const loadData = async () => {
     try {
       const saved = await supabase.from('blog').select('*').order('date', { ascending: false });
-      if (saved.data) setPosts(saved.data.map(p => ({
-        ...p,
+      if (saved.data) setPosts(saved.data.map((p: any) => ({
+        id: p.id,
+        title: p.title,
+        content: p.content,
+        excerpt: p.excerpt || '',
+        coverImage: p.cover_image || '', // Map snake_case to camelCase
         date: new Date(p.date).toISOString(),
+        author: p.author || 'Jakub Minka',
         tags: p.tags || []
       })));
       
@@ -90,7 +95,21 @@ const BlogManagerV2: React.FC = () => {
       };
 
       console.log('Saving blog post:', postData);
-      const { error, data } = await supabase.from('blog').upsert([postData], { onConflict: 'id' });
+      
+      // Map camelCase to snake_case for Supabase
+      const dbPost: any = {
+        id: postData.id,
+        title: postData.title,
+        excerpt: postData.excerpt,
+        content: postData.content,
+        cover_image: postData.coverImage,
+        date: postData.date,
+        author: postData.author,
+        tags: postData.tags
+      };
+      
+      console.log('DB post (mapped):', dbPost);
+      const { error, data } = await supabase.from('blog').upsert([dbPost], { onConflict: 'id' });
       
       console.log('Upsert response:', { error, data });
       if (error) throw error;

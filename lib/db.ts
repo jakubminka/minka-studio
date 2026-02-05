@@ -246,22 +246,32 @@ export class MediaDB {
     localStorage.setItem(this.cacheKey, JSON.stringify(current.map((i: any) => i.id === id ? { ...i, ...data } : i)));
 
     try {
-      const dbData = {
-        ...(data.name && { name: data.name }),
-        ...(data.type && { type: data.type }),
-        ...(data.url && { url: data.url }),
-        ...(data.parentId !== undefined && { parent_id: data.parentId }),
-        ...(data.specializationId !== undefined && { specialization_id: data.specializationId }),
+      const dbData: any = {
         updated_at: new Date().toISOString()
       };
+      
+      // Map camelCase to snake_case
+      if (data.name !== undefined) dbData.name = data.name;
+      if (data.type !== undefined) dbData.type = data.type;
+      if (data.url !== undefined) dbData.url = data.url;
+      if ('parentId' in data) dbData.parent_id = data.parentId;
+      if ('specializationId' in data) dbData.specialization_id = data.specializationId;
+      
+      console.log('🔄 Updating media_meta:', { id, dbData });
+      
       const { error } = await supabase
         .from('media_meta')
         .update(dbData)
         .eq('id', id);
       
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Update error from Supabase:', error);
+        throw error;
+      }
+      console.log('✅ Update successful for id:', id);
     } catch (e) {
-      console.error("Media update error:", e);
+      console.error("❌ Media update error:", e);
+      throw e;
     }
     window.dispatchEvent(new Event('storage'));
   }

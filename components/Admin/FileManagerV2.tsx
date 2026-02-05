@@ -232,13 +232,16 @@ const FileManagerV2: React.FC = () => {
   };
 
   const handleMoveToFolder = async (itemId: string, targetFolderId: string | null) => {
+    console.log('🔄 Starting move:', { itemId, targetFolderId });
     try {
-      await mediaDB.update(itemId, { parentId: targetFolderId });
+      const result = await mediaDB.update(itemId, { parentId: targetFolderId });
+      console.log('✅ Move successful:', result);
       setMoveToFolderId(null);
-      loadFiles();
+      await loadFiles();
+      console.log('✅ Files reloaded after move');
     } catch (err) {
-      console.error('Move error:', err);
-      alert('Chyba při přesunutí');
+      console.error('❌ Move error:', err);
+      alert('Chyba při přesunutí: ' + (err instanceof Error ? err.message : 'Neznámá chyba'));
     }
   };
 
