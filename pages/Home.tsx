@@ -63,12 +63,15 @@ const Home: React.FC = () => {
       const savedPartners = await dataStore.collection('partners').getAll();
       if (savedPartners) setPartners(savedPartners);
 
-      const savedReviews = await dataStore.collection('reviews').getAll();
+      // Load reviews with force refresh to ensure we get latest from DB
+      const savedReviews = await dataStore.collection('reviews').getAll({ force: true });
       if (savedReviews && savedReviews.length > 0) {
         // Map from DB format (content/company) to UI format (text/platform)
+        console.log('📖 Loaded reviews:', savedReviews.length);
         setReviews(savedReviews.map(mapReviewFromDb));
       } else {
         // Use default reviews as fallback
+        console.log('⚠️ No reviews found, using defaults');
         setReviews(DEFAULT_REVIEWS);
       }
       
@@ -172,7 +175,7 @@ const Home: React.FC = () => {
                 {activeProject?.title || settings.homeHeroTitle}
               </h1>
               <Link to={activeProject ? `/projekt/${activeProject.id}` : '/portfolio'} className="pointer-events-auto border-2 border-[#007BFF] px-14 py-5 text-[11px] font-black uppercase tracking-[0.6em] hover:bg-white hover:text-black transition-all bg-[#007BFF]/20 backdrop-blur-md">
-                {activeProject ? 'PROHLÉDNOUT' : 'VSTOUPIT'}
+                {activeProject ? 'DETAIL' : 'VSTOUPIT'}
               </Link>
             </motion.div>
           </AnimatePresence>
@@ -182,7 +185,7 @@ const Home: React.FC = () => {
           {heroProjects.map((_, i) => (
             <button 
               key={i} 
-              onClick={() => setCurrentSlide(i)}
+              onClick={() => {setCurrentSlide(i); return true;}} // Neresetuje timer, jen mění slide
               className={`h-2 transition-all duration-500 rounded-full ${currentSlide === i ? 'w-16 bg-[#007BFF]' : 'w-2 bg-white/20 hover:bg-white/40'}`}
             />
           ))}
@@ -255,8 +258,8 @@ const Home: React.FC = () => {
                 <div className="absolute inset-0 p-8 flex flex-col justify-end z-20">
                    <h4 className="text-xl md:text-2xl font-black text-white uppercase tracking-tighter group-hover:text-[#007BFF] transition-colors leading-tight">{spec.name}</h4>
                    <div className="h-0.5 w-0 bg-[#007BFF] group-hover:w-full transition-all duration-500 mt-4"></div>
-                   <p className="text-[8px] font-black text-[#007BFF] uppercase tracking-widest mt-4 opacity-0 group-hover:opacity-100 transition-opacity translate-y-4 group-hover:translate-y-0 duration-500">
-                     PROHLÉDNOUT VÝSLEDKY
+                   <p className="text-[8px] font-black text-[#007BFF] uppercase tracking-widest mt-4 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                     ZOBRAZIT VÍCE
                    </p>
                 </div>
                 <div className="absolute top-8 right-8 text-white/20 group-hover:text-[#007BFF] transition-colors z-20">

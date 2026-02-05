@@ -89,13 +89,32 @@ const ReviewManager: React.FC = () => {
   useEffect(() => { loadData(); }, []);
 
   const saveReview = async (review: Review) => {
-    await dataStore.collection('reviews').save(mapToDb(review));
-    await loadData();
+    try {
+      const dbReview = mapToDb(review);
+      console.log('💾 Saving review:', dbReview);
+      await dataStore.collection('reviews').save(dbReview);
+      console.log('✅ Review saved, reloading...');
+      await loadData();
+      // Force storage event to update Home page
+      window.dispatchEvent(new Event('storage'));
+    } catch (error) {
+      console.error('❌ Error saving review:', error);
+      throw error;
+    }
   };
 
   const deleteReview = async (id: string) => {
-    await dataStore.collection('reviews').delete(id);
-    await loadData();
+    try {
+      console.log('🗑️ Deleting review:', id);
+      await dataStore.collection('reviews').delete(id);
+      console.log('✅ Review deleted, reloading...');
+      await loadData();
+      // Force storage event to update Home page
+      window.dispatchEvent(new Event('storage'));
+    } catch (error) {
+      console.error('❌ Error deleting review:', error);
+      throw error;
+    }
   };
 
   const handleAddReview = async (e: React.FormEvent) => {
