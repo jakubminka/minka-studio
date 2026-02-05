@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS projects (
   description TEXT,
   image_url TEXT,
   project_url TEXT,
-  tags TEXT[], -- Array of tags/specializations
+  tags TEXT[],
   date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -91,7 +91,7 @@ CREATE TABLE IF NOT EXISTS media_meta (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Enable RLS (Row Level Security) for public access if needed
+-- Enable RLS (Row Level Security)
 ALTER TABLE blog ENABLE ROW LEVEL SECURITY;
 ALTER TABLE inquiries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
@@ -99,6 +99,17 @@ ALTER TABLE web_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE partners ENABLE ROW LEVEL SECURITY;
 ALTER TABLE media_meta ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Enable public read access for blog" ON blog;
+DROP POLICY IF EXISTS "Enable public read access for projects" ON projects;
+DROP POLICY IF EXISTS "Enable public read access for web_settings" ON web_settings;
+DROP POLICY IF EXISTS "Enable public read access for reviews" ON reviews;
+DROP POLICY IF EXISTS "Enable public read access for partners" ON partners;
+DROP POLICY IF EXISTS "Enable public read access for media_meta" ON media_meta;
+DROP POLICY IF EXISTS "Enable insert for inquiries" ON inquiries;
+DROP POLICY IF EXISTS "Enable update for inquiries" ON inquiries;
+DROP POLICY IF EXISTS "Enable delete for inquiries" ON inquiries;
 
 -- Create policies for public read access
 CREATE POLICY "Enable public read access for blog" ON blog FOR SELECT USING (true);
@@ -108,7 +119,7 @@ CREATE POLICY "Enable public read access for reviews" ON reviews FOR SELECT USIN
 CREATE POLICY "Enable public read access for partners" ON partners FOR SELECT USING (true);
 CREATE POLICY "Enable public read access for media_meta" ON media_meta FOR SELECT USING (true);
 
--- Allow authenticated users or with proper permissions to insert/update/delete
-CREATE POLICY "Enable insert for inquiries" ON inquiries FOR INSERT USING (true);
+-- Allow anyone to insert inquiries  
+CREATE POLICY "Enable insert for inquiries" ON inquiries FOR INSERT WITH CHECK (true);
 CREATE POLICY "Enable update for inquiries" ON inquiries FOR UPDATE USING (true);
 CREATE POLICY "Enable delete for inquiries" ON inquiries FOR DELETE USING (true);
