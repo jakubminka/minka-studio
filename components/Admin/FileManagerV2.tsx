@@ -85,18 +85,17 @@ const FileManagerV2: React.FC = () => {
     });
     
     for (const file of fileList) {
-      // Kontrola duplikátů - pouze v aktuální složce
+      // Kontrola duplikátů - GLOBÁLNĚ (ve všech složkách)
       const fileName = file.name.split('.')[0];
       const existingFile = items.find(i => 
         i.name === fileName && 
-        i.type !== 'folder' && 
-        i.parentId === currentFolderId
+        i.type !== 'folder'
       );
       
       if (existingFile) {
-        console.warn(`⚠️ Soubor "${file.name}" již existuje v této složce, bude přepsán`);
-        // Smažeme starý záznam z databáze
-        await mediaDB.delete(existingFile.id);
+        const folderName = existingFile.parentId ? items.find(f => f.id === existingFile.parentId)?.name || 'neznámá složka' : 'kořen';
+        alert(`❌ Soubor "${file.name}" již existuje v systému (složka: ${folderName}). Duplicitní soubory nejsou povoleny.`);
+        continue; // Skip this file
       }
 
       const uploadId = Math.random().toString(36).substr(2, 9);

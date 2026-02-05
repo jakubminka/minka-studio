@@ -114,29 +114,28 @@ const ProjectManagerV2: React.FC = () => {
     if (!e.target.files?.length) return;
     const files = Array.from(e.target.files) as File[];
     
-    // Check only for duplicates in current project gallery
-    const currentGalleryUrls = (formData.gallery || []).map(item => item.url);
-    const duplicatesInGallery: string[] = [];
+    // GLOBÁLNÍ kontrola duplicit - prohledat všechna média v databázi
+    const duplicatesInSystem: string[] = [];
     const filesToUpload: File[] = [];
     
     for (const file of files) {
       const fileBaseName = file.name.split('.')[0];
       
-      // Check if already in current project gallery
-      const inGallery = (formData.gallery || []).some(item => 
-        item.url.includes(fileBaseName)
+      // Check if file exists ANYWHERE in the media database
+      const existsInSystem = allMediaItems.some(item => 
+        item.name === fileBaseName && item.type !== 'folder'
       );
       
-      if (inGallery) {
-        duplicatesInGallery.push(file.name);
+      if (existsInSystem) {
+        duplicatesInSystem.push(file.name);
       } else {
         filesToUpload.push(file);
       }
     }
     
-    // Show error if duplicates found in current project
-    if (duplicatesInGallery.length > 0) {
-      alert(`⚠️ Následující soubory již jsou v galerii tohoto projektu:\n${duplicatesInGallery.join('\n')}\n\nNebudou přidány znovu.`);
+    // Show error if duplicates found anywhere in system
+    if (duplicatesInSystem.length > 0) {
+      alert(`❌ Následující soubory již existují v systému:\n${duplicatesInSystem.join('\n')}\n\nDuplicitní soubory nejsou povoleny.`);
     }
     
     // If no new files to upload, we're done

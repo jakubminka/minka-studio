@@ -10,13 +10,16 @@ import { dataStore, projectDB } from '../lib/db';
 
 const Home: React.FC = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [currentReviewIndex, setCurrentReviewIndex] = useState(0);
   const [projects, setProjects] = useState<Project[]>([]);
   const [partners, setPartners] = useState<{id: string, name: string}[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [currentReviewIndex, setCurrentReviewIndex] = useState(0);
   
-  // Zobrazit pouze prvních 4 recenze
-  const displayedReviews = useMemo(() => reviews.slice(0, 4), [reviews]);
+  // Shuffle reviews randomly on load
+  const shuffledReviews = useMemo(() => {
+    return [...reviews].sort(() => Math.random() - 0.5);
+  }, [reviews]);
+  
   const [hoverSide, setHoverSide] = useState<'left' | 'right' | null>(null);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [settings, setSettings] = useState<WebSettings>({
@@ -88,10 +91,10 @@ const Home: React.FC = () => {
 
   // Reset review index pokud je mimo rozsah
   useEffect(() => {
-    if (currentReviewIndex >= displayedReviews.length && displayedReviews.length > 0) {
+    if (currentReviewIndex >= shuffledReviews.length && shuffledReviews.length > 0) {
       setCurrentReviewIndex(0);
     }
-  }, [displayedReviews.length, currentReviewIndex]);
+  }, [shuffledReviews.length, currentReviewIndex]);
 
   const homePortfolioProjects = useMemo(() => {
     return [...projects].sort(() => Math.random() - 0.5).slice(0, 12);
@@ -340,72 +343,105 @@ const Home: React.FC = () => {
             <h2 className="text-5xl md:text-7xl font-black uppercase tracking-tighter text-black">Zpětná vazba</h2>
           </div>
           
-          {displayedReviews.length > 0 ? (
-            <div className="space-y-8">
-              {/* Carousel */}
-              <div className="relative">
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={currentReviewIndex}
-                    initial={{ opacity: 0, x: 30 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -30 }}
-                    transition={{ duration: 0.3, ease: "easeInOut" }}
-                    className="bg-gray-50 p-10 md:p-16 border border-gray-100 relative group hover:border-[#007BFF] transition-all duration-500 shadow-sm min-h-[400px] flex flex-col justify-between"
+          {shuffledReviews.length > 0 ? (
+            shuffledReviews.length <= 4 ? (
+              // Grid layout for 4 or fewer reviews
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {shuffledReviews.map((review, idx) => (
+                  <div
+                    key={review.id || idx}
+                    className="bg-gray-50 p-8 border border-gray-100 relative group hover:border-[#007BFF] transition-all duration-500 shadow-sm flex flex-col justify-between"
                   >
-                    <Quote className="absolute top-6 right-6 text-[#007BFF]/5 group-hover:text-[#007BFF]/10 transition-colors" size={48} />
+                    <Quote className="absolute top-4 right-4 text-[#007BFF]/5 group-hover:text-[#007BFF]/10 transition-colors" size={32} />
                     <div>
-                      <div className="flex gap-1 mb-8">
-                        {[...Array(displayedReviews[currentReviewIndex].rating)].map((_, i) => <Star key={i} size={14} fill="currentColor" className="text-[#007BFF]" />)}
+                      <div className="flex gap-1 mb-6">
+                        {[...Array(review.rating)].map((_, i) => <Star key={i} size={12} fill="currentColor" className="text-[#007BFF]" />)}
                       </div>
-                      <p className="text-gray-600 text-xl font-medium leading-relaxed mb-10 group-hover:text-black transition-colors">
-                        "{displayedReviews[currentReviewIndex].text}"
+                      <p className="text-gray-600 text-sm font-medium leading-relaxed mb-6 group-hover:text-black transition-colors line-clamp-6">
+                        "{review.text}"
                       </p>
                     </div>
-                    <div className="pt-8 border-t border-gray-200">
-                      <h4 className="font-black uppercase tracking-widest text-[11px] text-black">{displayedReviews[currentReviewIndex].author}</h4>
-                      <span className="text-[9px] font-bold text-[#007BFF] uppercase tracking-widest mt-1 block">{displayedReviews[currentReviewIndex].platform === 'google' ? 'GOOGLE MAPS' : displayedReviews[currentReviewIndex].platform === 'firmy' ? 'FIRMY.CZ' : 'OVĚŘENO'}</span>
+                    <div className="pt-6 border-t border-gray-200">
+                      <h4 className="font-black uppercase tracking-widest text-[10px] text-black">{review.author}</h4>
+                      <span className="text-[8px] font-bold text-[#007BFF] uppercase tracking-widest mt-1 block">
+                        {review.platform === 'google' ? 'GOOGLE MAPS' : review.platform === 'firmy' ? 'FIRMY.CZ' : 'OVĚŘENO'}
+                      </span>
                     </div>
-                  </motion.div>
-                </AnimatePresence>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              // Carousel for more than 4 reviews - show 4 at a time
+              <div className="space-y-8">
+                <div className="relative">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {shuffledReviews.slice(currentReviewIndex, currentReviewIndex + 4).map((review, idx) => (
+                      <motion.div
+                        key={review.id || idx}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3, delay: idx * 0.1 }}
+                        className="bg-gray-50 p-8 border border-gray-100 relative group hover:border-[#007BFF] transition-all duration-500 shadow-sm flex flex-col justify-between"
+                      >
+                        <Quote className="absolute top-4 right-4 text-[#007BFF]/5 group-hover:text-[#007BFF]/10 transition-colors" size={32} />
+                        <div>
+                          <div className="flex gap-1 mb-6">
+                            {[...Array(review.rating)].map((_, i) => <Star key={i} size={12} fill="currentColor" className="text-[#007BFF]" />)}
+                          </div>
+                          <p className="text-gray-600 text-sm font-medium leading-relaxed mb-6 group-hover:text-black transition-colors line-clamp-6">
+                            "{review.text}"
+                          </p>
+                        </div>
+                        <div className="pt-6 border-t border-gray-200">
+                          <h4 className="font-black uppercase tracking-widest text-[10px] text-black">{review.author}</h4>
+                          <span className="text-[8px] font-bold text-[#007BFF] uppercase tracking-widest mt-1 block">
+                            {review.platform === 'google' ? 'GOOGLE MAPS' : review.platform === 'firmy' ? 'FIRMY.CZ' : 'OVĚŘENO'}
+                          </span>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
 
-                {/* Navigation Arrows */}
-                {displayedReviews.length > 1 && (
-                  <>
-                    <button
-                      onClick={() => setCurrentReviewIndex((prev) => (prev - 1 + displayedReviews.length) % displayedReviews.length)}
-                      className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-16 md:-translate-x-20 w-12 h-12 flex items-center justify-center rounded-full bg-[#007BFF] text-white hover:bg-black transition-all shadow-lg"
-                    >
-                      <ArrowLeft size={20} />
-                    </button>
-                    <button
-                      onClick={() => setCurrentReviewIndex((prev) => (prev + 1) % displayedReviews.length)}
-                      className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-16 md:translate-x-20 w-12 h-12 flex items-center justify-center rounded-full bg-[#007BFF] text-white hover:bg-black transition-all shadow-lg"
-                    >
-                      <ArrowRight size={20} />
-                    </button>
-                  </>
+                  {/* Navigation Arrows */}
+                  {shuffledReviews.length > 4 && (
+                    <>
+                      <button
+                        onClick={() => setCurrentReviewIndex((prev) => Math.max(0, prev - 1))}
+                        disabled={currentReviewIndex === 0}
+                        className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-16 md:-translate-x-20 w-12 h-12 flex items-center justify-center rounded-full bg-[#007BFF] text-white hover:bg-black transition-all shadow-lg disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        <ArrowLeft size={20} />
+                      </button>
+                      <button
+                        onClick={() => setCurrentReviewIndex((prev) => Math.min(shuffledReviews.length - 4, prev + 1))}
+                        disabled={currentReviewIndex >= shuffledReviews.length - 4}
+                        className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-16 md:translate-x-20 w-12 h-12 flex items-center justify-center rounded-full bg-[#007BFF] text-white hover:bg-black transition-all shadow-lg disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        <ArrowRight size={20} />
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                {/* Breadcrumbs - dots for each possible position */}
+                {shuffledReviews.length > 4 && (
+                  <div className="flex justify-center gap-3">
+                    {[...Array(shuffledReviews.length - 3)].map((_, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setCurrentReviewIndex(idx)}
+                        className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                          currentReviewIndex === idx
+                            ? 'bg-[#007BFF] scale-125 shadow-lg'
+                            : 'bg-gray-300 hover:bg-gray-400'
+                        }`}
+                        aria-label={`Pozice ${idx + 1}`}
+                      />
+                    ))}
+                  </div>
                 )}
               </div>
-
-              {/* Breadcrumbs - pouze tečky */}
-              {displayedReviews.length > 1 && (
-                <div className="flex justify-center gap-3">
-                  {displayedReviews.map((_, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setCurrentReviewIndex(idx)}
-                      className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                        currentReviewIndex === idx
-                          ? 'bg-[#007BFF] scale-125 shadow-lg'
-                          : 'bg-gray-300 hover:bg-gray-400'
-                      }`}
-                      aria-label={`Recenze ${idx + 1}`}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
+            )
           ) : (
             <div className="text-center py-20 text-gray-400">
               <p className="text-lg font-medium">Zatím nejsou k dispozici žádné recenze</p>

@@ -71,7 +71,8 @@ const BlogPostDetail: React.FC = () => {
           className="prose prose-lg max-w-none text-gray-700 font-medium leading-relaxed
                      prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tighter prose-headings:text-black
                      prose-p:mb-8 prose-p:leading-relaxed
-                     prose-img:shadow-2xl prose-img:border prose-img:border-gray-100 prose-img:rounded-sm prose-img:mx-auto
+                     prose-img:shadow-2xl prose-img:border prose-img:border-gray-100 prose-img:rounded-sm prose-img:mx-auto prose-img:w-full prose-img:my-8
+                     prose-video:w-full prose-video:my-8 prose-video:shadow-2xl
                      prose-strong:text-black prose-strong:font-black
                      prose-a:text-[#007BFF] prose-a:no-underline hover:prose-a:underline
                      prose-ul:list-disc prose-li:mb-2"

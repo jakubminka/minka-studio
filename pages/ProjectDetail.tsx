@@ -89,6 +89,13 @@ const ProjectDetail: React.FC = () => {
 
   useEffect(() => {
     if (!project) return;
+    
+    // If only one video, use it as header background
+    if (singleVideoMode) {
+      setHeaderImage('');
+      return;
+    }
+    
     const galleryImages = (project.gallery || []).filter(item => item.type === 'image');
     if (galleryImages.length > 0) {
       const randomImage = galleryImages[Math.floor(Math.random() * galleryImages.length)];
@@ -96,7 +103,7 @@ const ProjectDetail: React.FC = () => {
     } else {
       setHeaderImage(project.thumbnailUrl || '');
     }
-  }, [project?.id]);
+  }, [project?.id, singleVideoMode]);
 
   if (!project) return null;
 
@@ -104,13 +111,33 @@ const ProjectDetail: React.FC = () => {
     <div className="min-h-screen bg-white">
       <header className="relative h-[85vh] flex items-center justify-center overflow-hidden bg-black">
         <div className="absolute inset-0 z-10 bg-gradient-to-t from-black via-black/20 to-transparent"></div>
-        <motion.img 
-          initial={{ scale: 1.1, opacity: 0 }} 
-          animate={{ scale: 1, opacity: 0.8 }} 
-          transition={{ duration: 1.5 }} 
-          src={headerImage || project.thumbnailUrl} 
-          className="absolute inset-0 w-full h-full object-cover" 
-        />
+        
+        {/* Video Header for single video projects */}
+        {singleVideoMode && singleVideoMode.source !== 'youtube' ? (
+          <video
+            src={singleVideoMode.url}
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover opacity-60"
+          />
+        ) : singleVideoMode && singleVideoMode.source === 'youtube' ? (
+          <iframe
+            src={`${getYouTubeEmbedUrl(singleVideoMode.url)}?autoplay=1&mute=1&loop=1&controls=0&showinfo=0&modestbranding=1&playsinline=1`}
+            className="absolute inset-0 w-full h-full object-cover opacity-60"
+            style={{ pointerEvents: 'none' }}
+            allow="autoplay; encrypted-media"
+          />
+        ) : (
+          <motion.img 
+            initial={{ scale: 1.1, opacity: 0 }} 
+            animate={{ scale: 1, opacity: 0.8 }} 
+            transition={{ duration: 1.5 }} 
+            src={headerImage || project.thumbnailUrl} 
+            className="absolute inset-0 w-full h-full object-cover" 
+          />
+        )}
         
         <div className="relative z-20 text-center px-6 max-w-7xl w-full">
           <Link to="/portfolio" className="inline-flex items-center gap-3 text-white/50 hover:text-white transition-all text-[10px] font-black uppercase tracking-[0.4em] mb-12 group">
