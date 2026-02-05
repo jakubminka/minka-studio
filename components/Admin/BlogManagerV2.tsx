@@ -39,7 +39,7 @@ const BlogManagerV2: React.FC = () => {
         title: p.title,
         content: p.content,
         excerpt: p.excerpt || '',
-        coverImage: p.cover_image || '', // Map snake_case to camelCase
+        coverImage: p.image_url || p.cover_image || '', // Try image_url first, fall back to cover_image
         date: new Date(p.date).toISOString(),
         author: p.author || 'Jakub Minka',
         tags: p.tags || []
@@ -102,7 +102,7 @@ const BlogManagerV2: React.FC = () => {
         title: postData.title,
         excerpt: postData.excerpt,
         content: postData.content,
-        cover_image: postData.coverImage,
+        image_url: postData.coverImage, // Use image_url instead of cover_image (both work)
         date: postData.date,
         author: postData.author,
         tags: postData.tags
@@ -526,7 +526,10 @@ const BlogManagerV2: React.FC = () => {
               className="bg-white rounded-lg overflow-hidden w-full max-w-4xl max-h-[90vh] flex flex-col"
             >
               <div className="bg-gray-50 border-b p-6 flex justify-between items-center">
-                <h3 className="text-xl font-black uppercase tracking-widest">Knihovna médií</h3>
+                <div>
+                  <h3 className="text-xl font-black uppercase tracking-widest">Knihovna médií</h3>
+                  <p className="text-[10px] text-gray-500 uppercase mt-1">Klikni na foto/video pro vložení do článku</p>
+                </div>
                 <button onClick={() => setShowMediaPicker(false)} className="p-2 hover:bg-gray-200 rounded">
                   <X size={24} />
                 </button>
@@ -568,6 +571,19 @@ const BlogManagerV2: React.FC = () => {
                   </div>
                 ))}
               </div>
+
+              {/* Footer with info */}
+              {allItems.length === 0 && (
+                <div className="bg-blue-50 border-t p-6 text-center">
+                  <p className="text-[12px] text-gray-600 mb-2">Žádná média v galerii</p>
+                  <p className="text-[10px] text-gray-500">Přidej fotky a videa přes správce souborů v administraci</p>
+                </div>
+              )}
+              {allItems.length > 0 && (
+                <div className="bg-gray-50 border-t p-4 text-center">
+                  <p className="text-[10px] text-gray-600 uppercase tracking-widest">💡 Tip: Nová média můžeš přidat přes <strong>Správce souborů</strong> v administraci</p>
+                </div>
+              )}
             </motion.div>
           </motion.div>
         )}

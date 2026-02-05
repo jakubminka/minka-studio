@@ -241,10 +241,7 @@ export class MediaDB {
     window.dispatchEvent(new Event('storage'));
   }
 
-  async update(id: string, data: any): Promise<void> {
-    const current = JSON.parse(localStorage.getItem(this.cacheKey) || '[]');
-    localStorage.setItem(this.cacheKey, JSON.stringify(current.map((i: any) => i.id === id ? { ...i, ...data } : i)));
-
+  async update(id: string, data: any): Promise<any> {
     try {
       const dbData: any = {
         updated_at: new Date().toISOString()
@@ -257,23 +254,31 @@ export class MediaDB {
       if ('parentId' in data) dbData.parent_id = data.parentId;
       if ('specializationId' in data) dbData.specialization_id = data.specializationId;
       
-      console.log('🔄 Updating media_meta:', { id, dbData });
+      console.log('🔄 Updating media_meta in Supabase:', { id, dbData });
       
-      const { error } = await supabase
+      const { error, data: response } = await supabase
         .from('media_meta')
         .update(dbData)
-        .eq('id', id);
+        .eq('id', id)
+        .select();
       
       if (error) {
         console.error('❌ Update error from Supabase:', error);
-        throw error;
+        throw new Error(`Supabase update failed: ${error.message}`);
       }
-      console.log('✅ Update successful for id:', id);
-    } catch (e) {
+      
+      console.log('✅ Update successful for id:', id, 'Response:', response);
+      
+      // Only update localStorage AFTER confirming database update
+      const current = JSON.parse(localStorage.getItem(this.cacheKey) || '[]');
+      localStorage.setItem(this.cacheKey, JSON.stringify(current.map((i: any) => i.id === id ? { ...i, ...data } : i)));
+      
+      window.dispatchEvent(new Event('storage'));
+      return response;
+    } catch (e: any) {
       console.error("❌ Media update error:", e);
       throw e;
     }
-    window.dispatchEvent(new Event('storage'));
   }
 }
 

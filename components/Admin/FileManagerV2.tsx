@@ -268,11 +268,23 @@ const FileManagerV2: React.FC = () => {
   const handleMoveToFolder = async (itemId: string, targetFolderId: string | null) => {
     console.log('🔄 Starting move:', { itemId, targetFolderId });
     try {
+      const moveItem = items.find(i => i.id === itemId);
+      if (!moveItem) {
+        throw new Error('Item not found');
+      }
+      
       const result = await mediaDB.update(itemId, { parentId: targetFolderId });
-      console.log('✅ Move successful:', result);
+      console.log('✅ Database move successful:', result);
+      
       setMoveToFolderId(null);
-      await loadFiles();
-      console.log('✅ Files reloaded after move');
+      setDraggedItem(null);
+      setDragOverId(null);
+      
+      // Reload files from database
+      const refreshedFiles = await mediaDB.getAll();
+      setItems(refreshedFiles.map(i => ({...i, parentId: i.parentId || null})));
+      console.log('✅ Files reloaded after move:', refreshedFiles.length, 'items');
+      
     } catch (err) {
       console.error('❌ Move error:', err);
       alert('Chyba při přesunutí: ' + (err instanceof Error ? err.message : 'Neznámá chyba'));
