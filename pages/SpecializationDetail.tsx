@@ -5,7 +5,7 @@ import { SPECIALIZATIONS, PROJECTS } from '../constants';
 import { CheckCircle2, ArrowRight, ChevronDown } from 'lucide-react';
 import MasonryGrid from '../components/MasonryGrid';
 import { motion } from 'framer-motion';
-import { dataStore } from '../lib/db';
+import { dataStore, projectDB } from '../lib/db';
 import { WebSettings } from '../types';
 
 const SpecializationDetail: React.FC = () => {
@@ -26,7 +26,7 @@ const SpecializationDetail: React.FC = () => {
     }
     
     const load = async () => {
-      const savedProjects = await dataStore.collection('projects').getAll();
+      const savedProjects = await projectDB.getAll();
       if (savedProjects.length > 0) setProjects(savedProjects);
 
       const savedSettings: WebSettings = await dataStore.doc('web_settings').get();

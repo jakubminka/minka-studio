@@ -6,7 +6,7 @@ import { Project, WebSettings, Review } from '../types';
 import { Link } from 'react-router-dom';
 import MasonryGrid from '../components/MasonryGrid';
 import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion';
-import { dataStore } from '../lib/db';
+import { dataStore, projectDB } from '../lib/db';
 
 const Home: React.FC = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -41,7 +41,7 @@ const Home: React.FC = () => {
 
   useEffect(() => {
     const load = async () => {
-      const savedProjects = await dataStore.collection('projects').getAll();
+      const savedProjects = await projectDB.getAll();
       if (savedProjects.length > 0) setProjects(savedProjects);
       
       const savedSettings = await dataStore.doc('web_settings').get();
