@@ -10,7 +10,7 @@ import { Link } from 'react-router-dom';
 import { WebSettings, Project } from '../types';
 import HumanVerificationModal from '../components/HumanVerificationModal';
 import { dataStore, projectDB } from '../lib/db';
-const PROJECTS = require('../constants').PROJECTS as Project[];
+import { PROJECTS } from '../constants';
 
 const Contact: React.FC = () => {
   const [formState, setFormState] = useState<'idle' | 'loading' | 'success'>('idle');

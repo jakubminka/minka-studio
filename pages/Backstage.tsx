@@ -5,8 +5,7 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { WebSettings, Project } from '../types';
 import { dataStore, projectDB } from '../lib/db';
-
-const PROJECTS = require('../constants').PROJECTS as Project[];
+import { PROJECTS } from '../constants';
 
 const Backstage: React.FC = () => {
   const [backstage, setBackstage] = useState<string[]>([]);
