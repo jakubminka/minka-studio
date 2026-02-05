@@ -51,14 +51,14 @@ const ProjectDetail: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      <header className="relative h-[85vh] flex items-center justify-center overflow-hidden bg-[#0A192F]">
-        <div className="absolute inset-0 z-10 bg-gradient-to-t from-[#0A192F] via-[#0A192F]/40 to-transparent"></div>
+      <header className="relative h-[85vh] flex items-center justify-center overflow-hidden bg-black">
+        <div className="absolute inset-0 z-10 bg-gradient-to-t from-black via-black/20 to-transparent"></div>
         <motion.img 
           initial={{ scale: 1.1, opacity: 0 }} 
-          animate={{ scale: 1, opacity: 0.5 }} 
+          animate={{ scale: 1, opacity: 0.8 }} 
           transition={{ duration: 1.5 }} 
           src={project.thumbnailUrl} 
-          className="absolute inset-0 w-full h-full object-cover grayscale" 
+          className="absolute inset-0 w-full h-full object-cover" 
         />
         
         <div className="relative z-20 text-center px-6 max-w-7xl w-full">
@@ -118,9 +118,8 @@ const ProjectDetail: React.FC = () => {
                 style={{ flexGrow: item.weight, flexBasis: window.innerWidth < 768 ? '100%' : `${item.weight * 300}px`, height: window.innerWidth < 768 ? '350px' : '550px' }}
                 onClick={() => setActiveLightboxIndex(idx)}
               >
-                <img src={item.url} className="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-[2s]" alt="" />
+                <img src={item.url} className="w-full h-full object-cover group-hover:scale-105 transition-all duration-[2s]" alt="" />
                 {item.type === 'video' && <div className="absolute inset-0 flex items-center justify-center pointer-events-none"><div className="w-20 h-20 bg-[#007BFF]/90 backdrop-blur-xl rounded-full flex items-center justify-center text-white shadow-2xl transition-all group-hover:scale-110"><Play size={28} fill="currentColor" /></div></div>}
-                <div className="absolute inset-0 bg-white/20 group-hover:bg-transparent transition-all"></div>
               </div>
             ))}
           </div>

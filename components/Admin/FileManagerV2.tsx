@@ -47,6 +47,7 @@ const FileManagerV2: React.FC = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
   const [draggedItem, setDraggedItem] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [moveToFolderId, setMoveToFolderId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'name' | 'date' | 'type'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -212,6 +213,39 @@ const FileManagerV2: React.FC = () => {
       console.error('Bulk delete error:', err);
       alert('Chyba při hromadném mazání: ' + (err instanceof Error ? err.message : 'Neznámá chyba'));
     }
+  };
+
+  const handleDragStart = (e: React.DragEvent, itemId: string) => {
+    setDraggedItem(itemId);
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', itemId);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent, folderId: string) => {
+    e.preventDefault();
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'move';
+    }
+    setDragOverId(folderId);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverId(null);
+  };
+
+  const handleDropOnFolder = async (e: React.DragEvent, targetFolderId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const itemId = draggedItem || e.dataTransfer?.getData('text/plain');
+    if (itemId && itemId !== targetFolderId) {
+      await handleMoveToFolder(itemId, targetFolderId);
+    }
+    
+    setDragOverId(null);
+    setDraggedItem(null);
   };
 
   const handleRename = async (id: string, newName: string) => {
@@ -452,14 +486,23 @@ const FileManagerV2: React.FC = () => {
                 className="relative group"
               >
                 <div 
-                  className="relative flex flex-col items-center gap-3 p-3 border-2 border-gray-100 rounded hover:border-[#007BFF] transition-all cursor-pointer bg-gray-50 hover:bg-white h-full"
+                  className={`relative flex flex-col items-center gap-3 p-3 border-2 rounded hover:border-[#007BFF] transition-all cursor-pointer bg-gray-50 hover:bg-white h-full ${
+                    dragOverId === item.id && item.type === 'folder' ? 'border-[#007BFF] bg-blue-50' : 'border-gray-100'
+                  }`}
                   onClick={() => item.type === 'folder' ? setCurrentFolderId(item.id) : setPreviewIndex(previewItems.findIndex(pi => pi.id === item.id))}
                   onContextMenu={(e) => handleContextMenu(e, item.id)}
+                  draggable={item.type !== 'folder'}
+                  onDragStart={(e) => item.type !== 'folder' && handleDragStart(e, item.id)}
+                  onDragOver={(e) => item.type === 'folder' && handleDragOver(e, item.id)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => item.type === 'folder' && handleDropOnFolder(e, item.id)}
                 >
                   {/* Type specific display */}
-                  <div className="w-full aspect-square flex items-center justify-center overflow-hidden rounded bg-white">
+                  <div className={`w-full aspect-square flex items-center justify-center overflow-hidden rounded bg-white transition-all ${dragOverId === item.id && item.type === 'folder' ? 'ring-2 ring-[#007BFF]' : ''}`}>
                     {item.type === 'folder' ? (
-                      <Folder size={48} className="text-[#007BFF]/40" />
+                      <div className={`transition-all ${dragOverId === item.id ? 'scale-110 text-[#007BFF]' : 'text-[#007BFF]/40'}`}>
+                        <Folder size={48} />
+                      </div>
                     ) : item.type === 'image' && item.url ? (
                       <img src={item.url} alt={item.name} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all" />
                     ) : (
@@ -565,7 +608,15 @@ const FileManagerV2: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {currentItems.map(item => (
-                <tr key={item.id} className={`hover:bg-gray-50 transition-all ${selectedIds.has(item.id) ? 'bg-blue-50' : ''}`}>
+                <tr 
+                  key={item.id} 
+                  className={`hover:bg-gray-50 transition-all ${selectedIds.has(item.id) ? 'bg-blue-50' : ''} ${dragOverId === item.id && item.type === 'folder' ? 'bg-blue-100 ring-1 ring-[#007BFF]' : ''}`}
+                  draggable={item.type !== 'folder'}
+                  onDragStart={(e) => item.type !== 'folder' && handleDragStart(e, item.id)}
+                  onDragOver={(e) => item.type === 'folder' && handleDragOver(e, item.id)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => item.type === 'folder' && handleDropOnFolder(e, item.id)}
+                >
                   <td className="px-3 py-3 text-center">
                     <button
                       onClick={(e) => {
@@ -586,7 +637,13 @@ const FileManagerV2: React.FC = () => {
                     </button>
                   </td>
                   <td className="px-6 py-3 flex items-center gap-3">
-                    {getFileIcon(item.type)}
+                    {item.type === 'folder' ? (
+                      <div className={`transition-all ${dragOverId === item.id ? 'text-[#007BFF] scale-110' : 'text-gray-600'}`}>
+                        <Folder size={16} />
+                      </div>
+                    ) : (
+                      getFileIcon(item.type)
+                    )}
                     <span className="truncate">{item.name}</span>
                   </td>
                   <td className="px-6 py-3 text-gray-500">
