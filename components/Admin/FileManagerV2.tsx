@@ -56,7 +56,7 @@ const FileManagerV2: React.FC = () => {
 
   const loadFiles = async () => {
     console.log('📂 [LOAD] Loading files from database...');
-    const dbItems = await mediaDB.getAll();
+    const dbItems = await mediaDB.getAll({ force: true });
     console.log('📂 [LOAD] Loaded', dbItems.length, 'items from DB');
     console.log('📂 [LOAD] Sample items:', dbItems.slice(0, 3).map(i => ({ name: i.name, parentId: i.parentId, type: typeof i.parentId })));
     const mappedItems = dbItems.map(i => ({...i, parentId: i.parentId || null}));
@@ -158,7 +158,7 @@ const FileManagerV2: React.FC = () => {
         await mediaDB.save(newItem);
         
         // Verify it was saved with correct parentId
-        const savedItem = (await mediaDB.getAll()).find(i => i.id === newItem.id);
+        const savedItem = (await mediaDB.getAll({ force: true })).find(i => i.id === newItem.id);
         console.log('✅ [UPLOAD] File saved, verified in DB:', { 
           name: savedItem?.name, 
           savedParentId: savedItem?.parentId,
@@ -271,7 +271,7 @@ const FileManagerV2: React.FC = () => {
       setSelectedIds(new Set());
       
       // Reload all files
-      const refreshedFiles = await mediaDB.getAll();
+      const refreshedFiles = await mediaDB.getAll({ force: true });
       setItems(refreshedFiles.map(i => ({...i, parentId: i.parentId || null})));
 
       const targetName = targetFolderId
@@ -362,7 +362,7 @@ const FileManagerV2: React.FC = () => {
       
       // Verify the update in database
       console.log('🔍 [MOVE] Verifying DB update...');
-      const verifyItem = await mediaDB.getAll().then(items => items.find(i => i.id === itemId));
+      const verifyItem = await mediaDB.getAll({ force: true }).then(items => items.find(i => i.id === itemId));
       if (!verifyItem) {
         throw new Error('Item disappeared from database after move');
       }
@@ -375,7 +375,7 @@ const FileManagerV2: React.FC = () => {
       
       // Reload files from database
       console.log('🔄 [MOVE] Reloading all items from database...');
-      const refreshedFiles = await mediaDB.getAll();
+      const refreshedFiles = await mediaDB.getAll({ force: true });
       const refreshedItem = refreshedFiles.find(i => i.id === itemId);
       console.log('🔄 [MOVE] Reloaded complete:', { totalItems: refreshedFiles.length, movedItemParentId: refreshedItem?.parentId });
       

@@ -48,9 +48,9 @@ const ProjectManagerV2: React.FC = () => {
   // Load projects and media
   useEffect(() => {
     const load = async () => {
-      const savedProjects = await projectDB.getAll();
+      const savedProjects = await projectDB.getAll({ force: true });
       setProjects(savedProjects);
-      const savedMedia = await mediaDB.getAll();
+      const savedMedia = await mediaDB.getAll({ force: true });
       setAllMediaItems(savedMedia);
     };
     load();
@@ -115,7 +115,7 @@ const ProjectManagerV2: React.FC = () => {
     const files = Array.from(e.target.files) as File[];
     
     // Load existing media to check for duplicates BEFORE starting
-    const existingMediaItems = await mediaDB.getAll();
+    const existingMediaItems = await mediaDB.getAll({ force: true });
     const currentGalleryUrls = (formData.gallery || []).map(item => item.url);
     const duplicatesInMedia: string[] = [];
     const duplicatesInGallery: string[] = [];
@@ -346,7 +346,7 @@ const ProjectManagerV2: React.FC = () => {
 
       await projectDB.save(project);
       console.log('Project saved, reloading list...');
-      const updated = await projectDB.getAll();
+      const updated = await projectDB.getAll({ force: true });
       console.log('Projects loaded:', updated);
       setProjects(updated);
       setShowForm(false);
@@ -404,7 +404,7 @@ const ProjectManagerV2: React.FC = () => {
     if (!confirm('Smazat projekt?')) return;
     try {
       await projectDB.delete(id);
-      const updated = await projectDB.getAll();
+      const updated = await projectDB.getAll({ force: true });
       setProjects(updated);
     } catch (err) {
       console.error('Delete error:', err);

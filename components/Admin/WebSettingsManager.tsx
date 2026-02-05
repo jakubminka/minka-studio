@@ -65,7 +65,7 @@ const WebSettingsManager: React.FC = () => {
         if (refs.footerDesc.current) refs.footerDesc.current.innerHTML = saved.footerDescription || '';
       }, 200);
     }
-    const dbItems = await mediaDB.getAll();
+    const dbItems = await mediaDB.getAll({ force: true });
     setAllItems(dbItems);
   };
 

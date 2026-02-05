@@ -26,9 +26,9 @@ const BlogManager: React.FC = () => {
   });
 
   const loadPosts = async () => {
-    const saved = await dataStore.collection('blog').getAll();
+    const saved = await dataStore.collection('blog').getAll({ force: true });
     setPosts(saved);
-    const dbItems = await mediaDB.getAll();
+    const dbItems = await mediaDB.getAll({ force: true });
     setAllItems(dbItems);
   };
 

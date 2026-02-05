@@ -69,7 +69,7 @@ const ReviewManager: React.FC = () => {
     }
 
     // Load from dataStore
-    const saved = await dataStore.collection('reviews').getAll();
+    const saved = await dataStore.collection('reviews').getAll({ force: true });
     const cached = JSON.parse(localStorage.getItem(cacheKey) || '[]');
     const isInitialized = localStorage.getItem(initKey) === 'true';
     if (saved && saved.length > 0) {

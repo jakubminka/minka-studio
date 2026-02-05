@@ -27,7 +27,7 @@ const PartnerManager: React.FC = () => {
     }
 
     // Load from dataStore
-    const saved = await dataStore.collection('partners').getAll();
+    const saved = await dataStore.collection('partners').getAll({ force: true });
     if (saved && saved.length > 0) {
       setPartners(saved.sort((a:any, b:any) => a.name.localeCompare(b.name)));
     }

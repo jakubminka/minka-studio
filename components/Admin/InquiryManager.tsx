@@ -13,7 +13,7 @@ const InquiryManager: React.FC = () => {
   const [editData, setEditData] = useState<Partial<Inquiry>>({});
 
   const loadData = async () => {
-    const saved = await dataStore.collection('inquiries').getAll();
+    const saved = await dataStore.collection('inquiries').getAll({ force: true });
     setInquiries(saved.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
   };
 

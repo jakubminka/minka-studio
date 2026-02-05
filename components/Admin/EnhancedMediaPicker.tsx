@@ -51,7 +51,7 @@ const EnhancedMediaPicker: React.FC<EnhancedMediaPickerProps> = ({
 
   const loadItems = async () => {
     try {
-      const dbItems = await mediaDB.getAll();
+      const dbItems = await mediaDB.getAll({ force: true });
       setItems(dbItems.map(i => ({...i, parentId: i.parentId || null})));
     } catch (err) {
       console.error('Error loading items:', err);

@@ -1,7 +1,12 @@
 
 import { supabase } from '../src/supabaseClient';
 
-const DEFAULT_CACHE_TTL_MS = 5 * 60 * 1000;
+const DEFAULT_CACHE_TTL_MS = 60 * 1000; // 1 minute for quick updates
+
+const invalidateCache = (cacheKey: string) => {
+  localStorage.removeItem(cacheKey);
+  localStorage.removeItem(`${cacheKey}_ts`);
+};
 
 const readCache = (cacheKey: string, ttlMs: number, force?: boolean): any[] | null => {
   if (force) return null;
@@ -88,9 +93,7 @@ class DataStore {
 
       save: async (item: any): Promise<void> => {
         try {
-          const localData = JSON.parse(localStorage.getItem(cacheKey) || '[]');
-          const updatedLocal = [item, ...localData.filter((i: any) => i.id !== item.id)];
-          writeCache(cacheKey, updatedLocal);
+          invalidateCache(cacheKey);
 
           try {
             const { error } = await supabase
@@ -109,9 +112,7 @@ class DataStore {
 
       delete: async (id: string): Promise<void> => {
         try {
-          const localData = JSON.parse(localStorage.getItem(cacheKey) || '[]');
-          const updatedLocal = localData.filter((i: any) => i.id !== id);
-          writeCache(cacheKey, updatedLocal);
+          invalidateCache(cacheKey);
 
           try {
             const { error } = await supabase
@@ -131,9 +132,7 @@ class DataStore {
 
       update: async (id: string, data: any): Promise<void> => {
         try {
-          const localData = JSON.parse(localStorage.getItem(cacheKey) || '[]');
-          const updatedLocal = localData.map((i: any) => i.id === id ? { ...i, ...data } : i);
-          writeCache(cacheKey, updatedLocal);
+          invalidateCache(cacheKey);
 
           try {
             const { error } = await supabase
@@ -176,7 +175,7 @@ class DataStore {
       },
 
       set: async (data: any) => {
-        writeCache(cacheKey, data);
+        invalidateCache(cacheKey);
         try {
           const { error } = await supabase
             .from('web_settings')
@@ -227,8 +226,9 @@ export class MediaDB {
     };
   }
 
-  async getAll(): Promise<any[]> {
-    const cached = readCache(this.cacheKey, DEFAULT_CACHE_TTL_MS);
+  async getAll(options?: { force?: boolean; ttlMs?: number }): Promise<any[]> {
+    const ttlMs = options?.ttlMs ?? DEFAULT_CACHE_TTL_MS;
+    const cached = readCache(this.cacheKey, ttlMs, options?.force);
     if (cached) return cached;
     try {
       const { data, error } = await supabase
@@ -246,8 +246,7 @@ export class MediaDB {
   }
 
   async save(item: any): Promise<void> {
-    const current = JSON.parse(localStorage.getItem(this.cacheKey) || '[]');
-    writeCache(this.cacheKey, [item, ...current]);
+    invalidateCache(this.cacheKey);
     
     try {
       const dbItem = this.toSnakeCase(item);
@@ -263,9 +262,7 @@ export class MediaDB {
   }
 
   async delete(id: string): Promise<void> {
-    const current = JSON.parse(localStorage.getItem(this.cacheKey) || '[]');
-    const updated = current.filter((i: any) => i.id !== id);
-    writeCache(this.cacheKey, updated);
+    invalidateCache(this.cacheKey);
 
     try {
       const { error } = await supabase
@@ -311,10 +308,8 @@ export class MediaDB {
       // Convert response to camelCase
       const camelCaseResponse = response ? response.map((item: any) => this.toCamelCase(item)) : [];
       
-      // Only update localStorage AFTER confirming database update
-      const current = JSON.parse(localStorage.getItem(this.cacheKey) || '[]');
-      const updated = current.map((i: any) => i.id === id ? camelCaseResponse[0] || i : i);
-      writeCache(this.cacheKey, updated);
+      // Invalidate cache to force fresh load
+      invalidateCache(this.cacheKey);
       
       window.dispatchEvent(new Event('storage'));
       return camelCaseResponse[0] || { id, ...data };
@@ -362,8 +357,9 @@ export class BlogDB {
     };
   }
 
-  async getAll(): Promise<any[]> {
-    const cached = readCache(this.cacheKey, DEFAULT_CACHE_TTL_MS);
+  async getAll(options?: { force?: boolean; ttlMs?: number }): Promise<any[]> {
+    const ttlMs = options?.ttlMs ?? DEFAULT_CACHE_TTL_MS;
+    const cached = readCache(this.cacheKey, ttlMs, options?.force);
     if (cached) return cached;
     try {
       const { data, error } = await supabase
@@ -400,10 +396,8 @@ export class BlogDB {
       
       console.log('✅ [BLOG SAVE] Success');
       
-      // Update localStorage
-      const current = JSON.parse(localStorage.getItem(this.cacheKey) || '[]');
-      const updated = [item, ...current.filter((i: any) => i.id !== item.id)];
-      writeCache(this.cacheKey, updated);
+      // Invalidate cache to force fresh load
+      invalidateCache(this.cacheKey);
       
       window.dispatchEvent(new Event('storage'));
       return item;
@@ -415,9 +409,7 @@ export class BlogDB {
 
   async delete(id: string): Promise<void> {
     try {
-      const current = JSON.parse(localStorage.getItem(this.cacheKey) || '[]');
-      const updated = current.filter((i: any) => i.id !== id);
-      writeCache(this.cacheKey, updated);
+      invalidateCache(this.cacheKey);
 
       const { error } = await supabase
         .from('blog')
@@ -479,8 +471,9 @@ export class ProjectDB {
     };
   }
 
-  async getAll(): Promise<any[]> {
-    const cached = readCache(this.cacheKey, DEFAULT_CACHE_TTL_MS);
+  async getAll(options?: { force?: boolean; ttlMs?: number }): Promise<any[]> {
+    const ttlMs = options?.ttlMs ?? DEFAULT_CACHE_TTL_MS;
+    const cached = readCache(this.cacheKey, ttlMs, options?.force);
     if (cached) return cached;
     try {
       const { data, error } = await supabase
@@ -499,9 +492,7 @@ export class ProjectDB {
   }
 
   async save(item: any): Promise<void> {
-    const current = JSON.parse(localStorage.getItem(this.cacheKey) || '[]');
-    const updated = [item, ...current.filter((i: any) => i.id !== item.id)];
-    writeCache(this.cacheKey, updated);
+    invalidateCache(this.cacheKey);
     
     try {
       const dbItem = this.toSnakeCase(item);
@@ -520,9 +511,7 @@ export class ProjectDB {
   }
 
   async delete(id: string): Promise<void> {
-    const current = JSON.parse(localStorage.getItem(this.cacheKey) || '[]');
-    const updated = current.filter((i: any) => i.id !== id);
-    writeCache(this.cacheKey, updated);
+    invalidateCache(this.cacheKey);
 
     try {
       const { error } = await supabase

@@ -30,7 +30,7 @@ const FileManager: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadFiles = async () => {
-    const dbItems = await mediaDB.getAll();
+    const dbItems = await mediaDB.getAll({ force: true });
     setItems(dbItems.map(i => ({...i, parentId: i.parentId || null})));
   };
 

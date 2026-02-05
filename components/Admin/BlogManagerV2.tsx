@@ -35,10 +35,10 @@ const BlogManagerV2: React.FC = () => {
 
   const loadData = async () => {
     try {
-      const saved = await blogDB.getAll();
+      const saved = await blogDB.getAll({ force: true });
       setPosts(saved);
       
-      const dbItems = await mediaDB.getAll();
+      const dbItems = await mediaDB.getAll({ force: true });
       setAllItems(dbItems.filter(i => i.type !== 'folder'));
     } catch (err) {
       console.error('Load error:', err);

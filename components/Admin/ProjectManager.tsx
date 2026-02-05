@@ -31,9 +31,9 @@ const ProjectManager: React.FC = () => {
   });
 
   const loadData = async () => {
-    const saved = await dataStore.collection('projects').getAll();
+    const saved = await dataStore.collection('projects').getAll({ force: true });
     setProjects(saved);
-    const dbItems = await mediaDB.getAll();
+    const dbItems = await mediaDB.getAll({ force: true });
     setAllItems(dbItems);
   };
 
