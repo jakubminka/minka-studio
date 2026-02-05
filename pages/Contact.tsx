@@ -80,13 +80,15 @@ const Contact: React.FC = () => {
           date: new Date().toISOString(), 
           status: 'new' 
         };
-        await dataStore.collection('inquiries').save(newInquiry);
+        console.log('Sending inquiry:', newInquiry);
+        const result = await dataStore.collection('inquiries').save(newInquiry);
+        console.log('Save result:', result);
         setFormState('success');
         setFormData({ name: '', email: '', subject: '', message: '' });
         setTimeout(() => setFormState('idle'), 5000);
       } catch (error) {
         console.error('Error sending inquiry:', error);
-        alert('Chyba při odesílání zprávy. Zkuste to znovu.');
+        alert('Chyba: ' + (error instanceof Error ? error.message : 'Neznámá chyba'));
         setFormState('idle');
       }
     }, 1500);
