@@ -360,7 +360,6 @@ export class BlogDB {
       const dbItem = this.toSnakeCase(item);
       console.log('📝 [BLOG SAVE] Original item:', item);
       console.log('📝 [BLOG SAVE] Converted to snake_case:', dbItem);
-      console.log('📝 [BLOG SAVE] Tags type:', typeof dbItem.tags, 'Value:', dbItem.tags);
       
       // Try without .select() first to avoid column access issues
       const { error } = await supabase

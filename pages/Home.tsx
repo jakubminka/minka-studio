@@ -69,6 +69,23 @@ const Home: React.FC = () => {
 
   const heroProjects = useMemo(() => projects.slice(0, 5), [projects]);
 
+  const pickRandomProjectImage = (project: Project): string => {
+    const galleryImages = (project.gallery || []).filter(item => item.type === 'image');
+    if (galleryImages.length > 0) {
+      const randomImage = galleryImages[Math.floor(Math.random() * galleryImages.length)];
+      return randomImage.url;
+    }
+    return project.thumbnailUrl;
+  };
+
+  const heroImages = useMemo(() => {
+    const map = new Map<string, string>();
+    heroProjects.forEach(project => {
+      map.set(project.id, pickRandomProjectImage(project));
+    });
+    return map;
+  }, [heroProjects]);
+
   const handleMouseMove = (e: React.MouseEvent) => {
     mouseX.set(e.clientX);
     mouseY.set(e.clientY);
@@ -119,7 +136,7 @@ const Home: React.FC = () => {
           {heroProjects.length > 0 ? heroProjects.map((project, idx) => (
             <div key={`bg-${project.id}`} className={`absolute inset-0 h-full w-full transition-opacity duration-[1500ms] ease-in-out ${idx === currentSlide ? 'opacity-100' : 'opacity-0'}`}>
               <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-black/60 z-10"></div>
-              <img src={project.thumbnailUrl} alt="" className="w-full h-full object-cover" />
+              <img src={heroImages.get(project.id) || project.thumbnailUrl} alt="" className="w-full h-full object-cover" />
             </div>
           )) : (
             <div className="absolute inset-0 h-full w-full">

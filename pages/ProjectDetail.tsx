@@ -14,6 +14,7 @@ const ProjectDetail: React.FC = () => {
   const navigate = useNavigate();
   const [project, setProject] = useState<Project | null>(null);
   const [activeLightboxIndex, setActiveLightboxIndex] = useState<number | null>(null);
+  const [headerImage, setHeaderImage] = useState<string>('');
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -67,6 +68,17 @@ const ProjectDetail: React.FC = () => {
     }));
   }, [project?.gallery]);
 
+  useEffect(() => {
+    if (!project) return;
+    const galleryImages = (project.gallery || []).filter(item => item.type === 'image');
+    if (galleryImages.length > 0) {
+      const randomImage = galleryImages[Math.floor(Math.random() * galleryImages.length)];
+      setHeaderImage(randomImage.url);
+    } else {
+      setHeaderImage(project.thumbnailUrl || '');
+    }
+  }, [project?.id]);
+
   if (!project) return null;
 
   return (
@@ -77,7 +89,7 @@ const ProjectDetail: React.FC = () => {
           initial={{ scale: 1.1, opacity: 0 }} 
           animate={{ scale: 1, opacity: 0.8 }} 
           transition={{ duration: 1.5 }} 
-          src={project.thumbnailUrl} 
+          src={headerImage || project.thumbnailUrl} 
           className="absolute inset-0 w-full h-full object-cover" 
         />
         

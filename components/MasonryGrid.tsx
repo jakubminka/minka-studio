@@ -19,7 +19,18 @@ const shuffleArray = <T extends object>(array: T[]): T[] => {
   return shuffled;
 };
 
-const ProjectItem: React.FC<{ project: Project, weight: number, showSpecialization: boolean }> = ({ project, weight, showSpecialization }) => {
+type ProjectWithThumb = Project & { displayThumbnailUrl: string };
+
+const pickRandomImage = (project: Project): string => {
+  const galleryImages = (project.gallery || []).filter(item => item.type === 'image');
+  if (galleryImages.length > 0) {
+    const randomImage = galleryImages[Math.floor(Math.random() * galleryImages.length)];
+    return randomImage.url;
+  }
+  return project.thumbnailUrl;
+};
+
+const ProjectItem: React.FC<{ project: ProjectWithThumb, weight: number, showSpecialization: boolean }> = ({ project, weight, showSpecialization }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const navigate = useNavigate();
 
@@ -48,7 +59,7 @@ const ProjectItem: React.FC<{ project: Project, weight: number, showSpecializati
       <Link to={`/projekt/${project.id}`} className="block w-full h-full relative">
         <div className="absolute inset-0 w-full h-full overflow-hidden">
           <motion.img 
-            src={project.thumbnailUrl} 
+            src={project.displayThumbnailUrl} 
             alt={project.title}
             loading="lazy"
             onLoad={() => setIsLoaded(true)}
@@ -94,7 +105,11 @@ const MasonryGrid: React.FC<MasonryGridProps> = ({ projects, showSpecialization 
   const randomizedLayout = useMemo(() => {
     if (!projects || projects.length === 0) return [];
     const shuffled = shuffleArray(projects);
-    return shuffled.map((project) => ({ ...project, weight: Math.random() > 0.5 ? 2.0 : 1.2 }));
+    return shuffled.map((project) => ({
+      ...project,
+      displayThumbnailUrl: pickRandomImage(project),
+      weight: Math.random() > 0.5 ? 2.0 : 1.2
+    }));
   }, [projects]); 
 
   return (

@@ -34,6 +34,7 @@ const ReviewManager: React.FC = () => {
   });
 
   const loadData = async () => {
+    const initKey = 'jakub_minka_reviews_initialized';
     // Try to migrate from old localStorage key
     const oldData = localStorage.getItem('jakub_minka_reviews');
     if (oldData) {
@@ -46,14 +47,22 @@ const ReviewManager: React.FC = () => {
 
     // Load from dataStore
     const saved = await dataStore.collection('reviews').getAll();
+    const isInitialized = localStorage.getItem(initKey) === 'true';
     if (saved && saved.length > 0) {
       setReviews(saved);
-    } else {
-      // Initialize with default reviews if none exist
+      if (!isInitialized) localStorage.setItem(initKey, 'true');
+      return;
+    }
+
+    if (!isInitialized) {
+      // Initialize with default reviews only on first run
       for (const review of INITIAL_REVIEWS) {
         await dataStore.collection('reviews').save(review);
       }
       setReviews(INITIAL_REVIEWS);
+      localStorage.setItem(initKey, 'true');
+    } else {
+      setReviews([]);
     }
   };
 

@@ -316,7 +316,7 @@ const ProjectManagerV2: React.FC = () => {
     // Auto-select random thumbnail from gallery if gallery has images
     let thumbnailUrl = formData.thumbnailUrl || '';
     const galleryImages = (formData.gallery || []).filter(item => item.type === 'image');
-    if (galleryImages.length > 0) {
+    if (!thumbnailUrl && galleryImages.length > 0) {
       const randomImage = galleryImages[Math.floor(Math.random() * galleryImages.length)];
       thumbnailUrl = randomImage.url;
       console.log('🎲 Auto-selected random thumbnail from gallery:', randomImage.url);
@@ -410,6 +410,9 @@ const ProjectManagerV2: React.FC = () => {
       console.error('Delete error:', err);
       alert('Error deleting project');
     }
+  };
+
+  const filteredProjects = projects
     .filter(p =>
       (p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
        p.shortDescription?.toLowerCase().includes(searchQuery.toLowerCase())) &&
@@ -420,7 +423,16 @@ const ProjectManagerV2: React.FC = () => {
         return new Date(b.date).getTime() - new Date(a.date).getTime();
       } else if (sortBy === 'title') {
         return a.title.localeCompare(b.title);
-      } else if (sortBy === 'category') {shadow-sm space-y-4">
+      } else if (sortBy === 'category') {
+        return a.category.localeCompare(b.category);
+      }
+      return 0;
+    });
+
+  return (
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="bg-white p-6 border shadow-sm space-y-4">
         <div className="flex justify-between items-center">
           <button
             onClick={() => { resetForm(); setShowForm(true); }}
@@ -492,19 +504,7 @@ const ProjectManagerV2: React.FC = () => {
           {/* Count */}
           <div className="ml-auto text-[10px] font-black uppercase text-gray-400 tracking-widest">
             {filteredProjects.length} / {projects.length} zakázek
-          </divlassName="bg-[#007BFF] text-white px-8 py-3.5 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all"
-        >
-          <Plus className="inline mr-2" size={16} /> PŘIDAT ZAKÁZKU
-        </button>
-        <div className="relative">
-          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="HLEDAT..."
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className="pl-12 pr-6 py-3 border text-[10px] font-black w-64 uppercase bg-white text-black"
-          />
+          </div>
         </div>
       </div>
 
