@@ -25,11 +25,21 @@ interface Folder {
   itemCount: number;
 }
 
+interface ContextMenu {
+  x: number;
+  y: number;
+  itemId: string;
+}
+
 const FileManagerV2: React.FC = () => {
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [items, setItems] = useState<FileItem[]>([]);
-  const [previewItem, setPreviewItem] = useState<FileItem | null>(null);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  
+  const previewItems = useMemo(() => {
+    return currentItems.filter(item => item.type !== 'folder');
+  }, [currentItems]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [uploadQueue, setUploadQueue] = useState<UploadStatus[]>([]);
   const [isQueueMinimized, setIsQueueMinimized] = useState(false);
@@ -38,6 +48,9 @@ const FileManagerV2: React.FC = () => {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [showMetadataEditor, setShowMetadataEditor] = useState<FileItem | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
+  const [draggedItem, setDraggedItem] = useState<string | null>(null);
+  const [moveToFolderId, setMoveToFolderId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadFiles = async () => {
@@ -59,6 +72,22 @@ const FileManagerV2: React.FC = () => {
     const fileList = Array.from(files) as File[];
     
     for (const file of fileList) {
+      // Kontrola duplikátů - je soubor s tímto jménem již v systému?
+      const fileName = file.name.split('.')[0];
+      const existingFile = items.find(i => i.name === fileName && i.type !== 'folder');
+      
+      if (existingFile) {
+        const uploadId = Math.random().toString(36).substr(2, 9);
+        setUploadQueue(prev => [...prev, { 
+          id: uploadId, 
+          fileName: file.name, 
+          progress: 0, 
+          status: 'error', 
+          error: `Soubor "${file.name}" již existuje` 
+        }]);
+        continue;
+      }
+
       const uploadId = Math.random().toString(36).substr(2, 9);
       const initialStatus: UploadStatus = {
         id: uploadId, fileName: file.name, progress: 0,
@@ -157,6 +186,27 @@ const FileManagerV2: React.FC = () => {
       console.error('Rename error:', err);
       alert('Chyba při přejmenování');
     }
+  };
+
+  const handleMoveToFolder = async (itemId: string, targetFolderId: string | null) => {
+    try {
+      await mediaDB.update(itemId, { parentId: targetFolderId });
+      setMoveToFolderId(null);
+      loadFiles();
+    } catch (err) {
+      console.error('Move error:', err);
+      alert('Chyba při přesunutí');
+    }
+  };
+
+  const handleContextMenu = (e: React.MouseEvent, itemId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      itemId
+    });
   };
 
   const handleCreateFolder = async () => {
@@ -308,7 +358,8 @@ const FileManagerV2: React.FC = () => {
               >
                 <div 
                   className="relative flex flex-col items-center gap-3 p-3 border-2 border-gray-100 rounded hover:border-[#007BFF] transition-all cursor-pointer bg-gray-50 hover:bg-white h-full"
-                  onClick={() => item.type === 'folder' ? setCurrentFolderId(item.id) : setPreviewItem(item)}
+                  onClick={() => item.type === 'folder' ? setCurrentFolderId(item.id) : setPreviewIndex(previewItems.findIndex(pi => pi.id === item.id))}
+                  onContextMenu={(e) => handleContextMenu(e, item.id)}
                 >
                   {/* Type specific display */}
                   <div className="w-full aspect-square flex items-center justify-center overflow-hidden rounded bg-white">
@@ -330,7 +381,11 @@ const FileManagerV2: React.FC = () => {
                     {item.type !== 'folder' && (
                       <>
                         <button 
-                          onClick={(e) => { e.stopPropagation(); setPreviewItem(item); }}
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            const idx = previewItems.findIndex(pi => pi.id === item.id);
+                            if (idx >= 0) setPreviewIndex(idx);
+                          }}
                           className="p-2 bg-white/20 hover:bg-white/40 rounded text-white backdrop-blur"
                           title="Náhled"
                         >
@@ -395,7 +450,7 @@ const FileManagerV2: React.FC = () => {
                       {item.type !== 'folder' && (
                         <>
                           <button 
-                            onClick={() => setPreviewItem(item)}
+                            onClick={() => setPreviewIndex(previewItems.findIndex(pi => pi.id === item.id))}
                             className="p-1 hover:text-[#007BFF]"
                             title="Náhled"
                           >
@@ -433,49 +488,109 @@ const FileManagerV2: React.FC = () => {
         </div>
       )}
 
-      {/* File Preview Modal */}
+      {/* Enhanced File Preview Modal with Navigation */}
       <AnimatePresence>
-        {previewItem && (
+        {previewIndex !== null && previewItems[previewIndex] && (
           <motion.div 
             initial={{ opacity: 0 }} 
             animate={{ opacity: 1 }} 
             exit={{ opacity: 0 }}
-            onClick={() => setPreviewItem(null)}
-            className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6"
+            onClick={() => setPreviewIndex(null)}
+            className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4"
           >
             <motion.div 
-              initial={{ scale: 0.9 }} 
+              initial={{ scale: 0.95 }} 
               animate={{ scale: 1 }} 
-              exit={{ scale: 0.9 }}
+              exit={{ scale: 0.95 }}
               onClick={e => e.stopPropagation()}
-              className="bg-white rounded p-6 max-w-2xl w-full space-y-4"
+              className="bg-black rounded flex flex-col h-full max-h-[95vh] w-full max-w-7xl"
             >
-              <div className="flex justify-between items-start">
-                <h3 className="text-lg font-black uppercase tracking-widest">{previewItem.name}</h3>
-                <button onClick={() => setPreviewItem(null)} className="p-1 hover:bg-gray-100 rounded">
-                  <X size={20} />
+              {/* Header */}
+              <div className="border-b border-gray-700 p-4 flex justify-between items-center bg-gray-900">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">
+                    {previewIndex + 1} z {previewItems.length}
+                  </p>
+                  <h3 className="text-lg font-black uppercase tracking-widest text-white max-w-sm truncate">{previewItems[previewIndex]?.name}</h3>
+                </div>
+                <button onClick={() => setPreviewIndex(null)} className="p-2 hover:bg-gray-800 rounded text-white">
+                  <X size={24} />
                 </button>
               </div>
 
-              {previewItem.type === 'image' && previewItem.url && (
-                <img src={previewItem.url} alt={previewItem.name} className="w-full h-auto rounded" />
-              )}
-              {previewItem.type === 'video' && previewItem.url && (
-                <video src={previewItem.url} controls className="w-full h-auto rounded" />
-              )}
+              {/* Main Preview Area */}
+              <div className="flex-1 overflow-hidden flex">
+                {/* Left Navigation */}
+                <button 
+                  onClick={() => setPreviewIndex(previewIndex > 0 ? previewIndex - 1 : previewItems.length - 1)}
+                  className="p-4 hover:bg-gray-800/50 transition-all text-white flex items-center justify-center"
+                  title="Předchozí"
+                >
+                  <ChevronLeft size={32} />
+                </button>
 
-              <div className="grid grid-cols-2 gap-4 text-[10px] font-black uppercase tracking-widest text-gray-600">
+                {/* Media Display */}
+                <div className="flex-1 flex items-center justify-center overflow-hidden bg-black">
+                  {previewItems[previewIndex]?.type === 'image' && previewItems[previewIndex]?.url && (
+                    <img 
+                      src={previewItems[previewIndex].url} 
+                      alt={previewItems[previewIndex].name} 
+                      className="max-w-full max-h-full object-contain"
+                    />
+                  )}
+                  {previewItems[previewIndex]?.type === 'video' && previewItems[previewIndex]?.url && (
+                    <video 
+                      src={previewItems[previewIndex].url} 
+                      controls 
+                      className="max-w-full max-h-full object-contain"
+                      autoPlay
+                    />
+                  )}
+                </div>
+
+                {/* Right Navigation */}
+                <button 
+                  onClick={() => setPreviewIndex(previewIndex < previewItems.length - 1 ? previewIndex + 1 : 0)}
+                  className="p-4 hover:bg-gray-800/50 transition-all text-white flex items-center justify-center"
+                  title="Další"
+                >
+                  <ChevronRight size={32} />
+                </button>
+              </div>
+
+              {/* Metadata Footer */}
+              <div className="border-t border-gray-700 bg-gray-900 p-6 grid grid-cols-2 md:grid-cols-4 gap-6">
                 <div>
-                  <p className="text-gray-400 mb-1">Typ</p>
-                  <p>{previewItem.type}</p>
+                  <p className="text-[9px] font-black uppercase text-gray-500 mb-1">Typ</p>
+                  <p className="text-white">{previewItems[previewIndex]?.type.toUpperCase()}</p>
                 </div>
                 <div>
-                  <p className="text-gray-400 mb-1">Velikost</p>
-                  <p>{previewItem.size}</p>
+                  <p className="text-[9px] font-black uppercase text-gray-500 mb-1">Velikost</p>
+                  <p className="text-white">{previewItems[previewIndex]?.size || '—'}</p>
                 </div>
-                <div className="col-span-2">
-                  <p className="text-gray-400 mb-1">URL</p>
-                  <p className="font-mono text-[8px] break-all bg-gray-50 p-2 rounded">{previewItem.url}</p>
+                <div>
+                  <p className="text-[9px] font-black uppercase text-gray-500 mb-1">Vytvořeno</p>
+                  <p className="text-white text-sm">{formatDate(previewItems[previewIndex]?.created_at)}</p>
+                </div>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => {
+                      setShowMetadataEditor(previewItems[previewIndex]);
+                      setPreviewIndex(null);
+                    }}
+                    className="flex-1 px-3 py-2 bg-[#007BFF] text-white rounded text-[9px] font-black uppercase hover:bg-blue-700 transition-all"
+                  >
+                    Metadata
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setDeleteConfirm(previewItems[previewIndex]?.id || null);
+                      setPreviewIndex(null);
+                    }}
+                    className="px-3 py-2 bg-red-600 text-white rounded text-[9px] font-black uppercase hover:bg-red-700 transition-all"
+                  >
+                    Smazat
+                  </button>
                 </div>
               </div>
             </motion.div>
@@ -491,56 +606,127 @@ const FileManagerV2: React.FC = () => {
             animate={{ opacity: 1 }} 
             exit={{ opacity: 0 }}
             onClick={() => setShowMetadataEditor(null)}
-            className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6"
+            className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6 overflow-y-auto"
           >
             <motion.div 
               initial={{ scale: 0.9 }} 
               animate={{ scale: 1 }} 
               exit={{ scale: 0.9 }}
               onClick={e => e.stopPropagation()}
-              className="bg-white rounded p-6 max-w-md w-full space-y-4"
+              className="bg-white rounded p-8 max-w-lg w-full space-y-6 my-8"
             >
               <div className="flex justify-between items-start">
-                <h3 className="text-lg font-black uppercase tracking-widest">Metadata</h3>
+                <div>
+                  <h3 className="text-2xl font-black uppercase tracking-widest mb-2">Metadata</h3>
+                  <p className="text-[10px] text-gray-500 uppercase tracking-widest">{showMetadataEditor.name}</p>
+                </div>
                 <button onClick={() => setShowMetadataEditor(null)} className="p-1 hover:bg-gray-100 rounded">
                   <X size={20} />
                 </button>
               </div>
 
-              <div className="space-y-4 text-[10px] font-black uppercase tracking-widest">
+              <div className="space-y-5 text-[11px] font-black uppercase tracking-widest">
+                {/* Thumbnail Preview */}
+                <div className="flex items-center justify-center w-full h-40 bg-gray-50 rounded border border-gray-200">
+                  {showMetadataEditor.type === 'image' && showMetadataEditor.url && (
+                    <img src={showMetadataEditor.url} alt="" className="max-w-full max-h-full object-contain" />
+                  )}
+                  {showMetadataEditor.type === 'video' && (
+                    <VideoIcon size={48} className="text-gray-300" />
+                  )}
+                </div>
+
+                {/* Name */}
                 <div>
                   <label className="block text-gray-600 mb-2">Název</label>
                   <input 
                     type="text" 
-                    defaultValue={showMetadataEditor.name}
+                    value={editName}
                     onChange={e => setEditName(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-200 rounded focus:border-[#007BFF] outline-none"
+                    className="w-full px-4 py-2 border border-gray-200 rounded focus:border-[#007BFF] outline-none text-[10px]"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+
+                {/* Description */}
+                <div>
+                  <label className="block text-gray-600 mb-2">Popis</label>
+                  <textarea 
+                    placeholder="Přidej popis souboru..."
+                    rows={3}
+                    className="w-full px-4 py-2 border border-gray-200 rounded focus:border-[#007BFF] outline-none text-[10px] resize-none"
+                  />
+                </div>
+
+                {/* Tags */}
+                <div>
+                  <label className="block text-gray-600 mb-2">Štítky</label>
+                  <input 
+                    type="text" 
+                    placeholder="Odděluj čárkami: tag1, tag2, tag3"
+                    className="w-full px-4 py-2 border border-gray-200 rounded focus:border-[#007BFF] outline-none text-[10px]"
+                  />
+                </div>
+
+                {/* File Info */}
+                <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded">
                   <div>
-                    <p className="text-gray-600 mb-2">Typ</p>
-                    <p className="bg-gray-50 px-3 py-2 rounded">{showMetadataEditor.type}</p>
+                    <p className="text-gray-500 mb-1">Typ</p>
+                    <p className="text-gray-800">{showMetadataEditor.type.toUpperCase()}</p>
                   </div>
                   <div>
-                    <p className="text-gray-600 mb-2">Velikost</p>
-                    <p className="bg-gray-50 px-3 py-2 rounded">{showMetadataEditor.size}</p>
+                    <p className="text-gray-500 mb-1">Velikost</p>
+                    <p className="text-gray-800">{showMetadataEditor.size || '—'}</p>
                   </div>
-                  <div className="col-span-2">
-                    <p className="text-gray-600 mb-2">Vytvořeno</p>
-                    <p className="bg-gray-50 px-3 py-2 rounded">{formatDate(showMetadataEditor.created_at)}</p>
+                  <div>
+                    <p className="text-gray-500 mb-1">Vytvořeno</p>
+                    <p className="text-gray-800">{formatDate(showMetadataEditor.created_at)}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 mb-1">ID</p>
+                    <p className="text-gray-800 text-[9px] font-mono break-all">{showMetadataEditor.id}</p>
                   </div>
                 </div>
 
-                <button 
-                  onClick={() => {
-                    handleRename(showMetadataEditor.id, editName);
-                    setShowMetadataEditor(null);
-                  }}
-                  className="w-full bg-[#007BFF] text-white px-4 py-2 rounded hover:bg-blue-700 transition-all"
-                >
-                  Uložit
-                </button>
+                {/* URL */}
+                <div>
+                  <label className="block text-gray-600 mb-2">URL</label>
+                  <div className="flex gap-2">
+                    <input 
+                      type="text" 
+                      value={showMetadataEditor.url}
+                      readOnly
+                      className="flex-1 px-4 py-2 border border-gray-200 rounded bg-gray-50 text-[9px] font-mono"
+                    />
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText(showMetadataEditor.url);
+                        alert('URL zkopírován');
+                      }}
+                      className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded text-[9px]"
+                    >
+                      Kopírovat
+                    </button>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-3 pt-4 border-t border-gray-200">
+                  <button 
+                    onClick={() => {
+                      handleRename(showMetadataEditor.id, editName);
+                      setShowMetadataEditor(null);
+                    }}
+                    className="flex-1 bg-[#007BFF] text-white px-4 py-3 rounded hover:bg-blue-700 transition-all text-[10px] font-black"
+                  >
+                    Uložit metadata
+                  </button>
+                  <button 
+                    onClick={() => setShowMetadataEditor(null)}
+                    className="px-4 py-3 border border-gray-200 rounded hover:bg-gray-50 transition-all text-[10px] font-black"
+                  >
+                    Zrušit
+                  </button>
+                </div>
               </div>
             </motion.div>
           </motion.div>
@@ -696,6 +882,148 @@ const FileManagerV2: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+      {/* Context Menu */}
+      {contextMenu && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          style={{
+            position: 'fixed',
+            top: contextMenu.y,
+            left: contextMenu.x,
+            zIndex: 9999
+          }}
+          className="bg-white border border-gray-200 rounded shadow-xl overflow-hidden w-48"
+          onClick={e => e.stopPropagation()}
+          onContextMenu={e => e.preventDefault()}
+        >
+          <div className="py-1">
+            {/* Rename */}
+            <button
+              onClick={() => {
+                const item = items.find(i => i.id === contextMenu.itemId);
+                if (item) {
+                  setEditingItem(item);
+                  setEditName(item.name);
+                }
+                setContextMenu(null);
+              }}
+              className="w-full text-left px-4 py-2 text-[10px] font-black uppercase hover:bg-blue-50 flex items-center gap-2 transition-colors"
+            >
+              <Edit2 size={14} /> Přejmenovat
+            </button>
+
+            {/* Move to Folder */}
+            {items.find(i => i.id === contextMenu.itemId)?.type !== 'folder' && (
+              <button
+                onClick={() => {
+                  setMoveToFolderId(contextMenu.itemId);
+                  setContextMenu(null);
+                }}
+                className="w-full text-left px-4 py-2 text-[10px] font-black uppercase hover:bg-blue-50 flex items-center gap-2 transition-colors"
+              >
+                <Move size={14} /> Přesunout do složky
+              </button>
+            )}
+
+            {/* Metadata */}
+            {items.find(i => i.id === contextMenu.itemId)?.type !== 'folder' && (
+              <button
+                onClick={() => {
+                  const item = items.find(i => i.id === contextMenu.itemId);
+                  if (item) {
+                    setShowMetadataEditor(item);
+                    setEditName(item.name);
+                  }
+                  setContextMenu(null);
+                }}
+                className="w-full text-left px-4 py-2 text-[10px] font-black uppercase hover:bg-blue-50 flex items-center gap-2 transition-colors"
+              >
+                <Tag size={14} /> Metadata
+              </button>
+            )}
+
+            {/* Divider */}
+            <div className="h-px bg-gray-200 my-1"></div>
+
+            {/* Delete */}
+            <button
+              onClick={() => {
+                setDeleteConfirm(contextMenu.itemId);
+                setContextMenu(null);
+              }}
+              className="w-full text-left px-4 py-2 text-[10px] font-black uppercase text-red-500 hover:bg-red-50 flex items-center gap-2 transition-colors"
+            >
+              <Trash2 size={14} /> Smazat
+            </button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Move to Folder Modal */}
+      <AnimatePresence>
+        {moveToFolderId && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setMoveToFolderId(null)}
+            className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6"
+          >
+            <motion.div
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.9 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-white rounded-lg p-6 max-w-md w-full space-y-4"
+            >
+              <h3 className="text-lg font-black uppercase tracking-widest">Přesunout do složky</h3>
+
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {/* Root */}
+                <button
+                  onClick={() => {
+                    handleMoveToFolder(moveToFolderId, null);
+                  }}
+                  className="w-full text-left px-4 py-2 hover:bg-blue-50 rounded text-[10px] font-black uppercase flex items-center gap-2"
+                >
+                  <FolderPlus size={14} /> Kořen
+                </button>
+
+                {/* Folders */}
+                {items.filter(i => i.type === 'folder').map(folder => (
+                  <button
+                    key={folder.id}
+                    onClick={() => {
+                      handleMoveToFolder(moveToFolderId, folder.id);
+                    }}
+                    className="w-full text-left px-4 py-2 pl-8 hover:bg-blue-50 rounded text-[10px] font-black uppercase"
+                  >
+                    {folder.name}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setMoveToFolderId(null)}
+                className="w-full px-4 py-2 border border-gray-200 rounded hover:bg-gray-50 text-[10px] font-black uppercase"
+              >
+                Zrušit
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Global Context Menu Closer */}
+      {contextMenu && (
+        <div
+          className="fixed inset-0 z-[9998]"
+          onClick={() => setContextMenu(null)}
+          onContextMenu={e => e.preventDefault()}
+        />
+      )}
     </div>
   );
 };
