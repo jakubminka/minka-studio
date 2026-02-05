@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { 
   Folder, ImageIcon, Video as VideoIcon, Upload, Plus, ChevronRight, ChevronLeft,
@@ -8,8 +7,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FileItem } from '../../types';
-import { mediaDB, storage, optimizeImage } from '../../lib/db';
-import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+import { mediaDB, optimizeImage } from '../../lib/db';
+import { supabase } from '../../src/supabaseClient';
 
 interface UploadStatus {
   id: string;
@@ -46,7 +45,6 @@ const FileManager: React.FC = () => {
     if (!files || files.length === 0) return;
     
     const quality = parseFloat(localStorage.getItem('jakub_minka_compression_quality') || '0.8');
-    // Fix: Explicitly cast to File[] to avoid 'unknown' type errors during property access
     const fileList = Array.from(files) as File[];
     
     for (const file of fileList) {
@@ -67,45 +65,42 @@ const FileManager: React.FC = () => {
         }
 
         const fileId = 'm-' + Math.random().toString(36).substr(2, 9);
-        const storagePath = `uploads/${fileId}_${file.name}`;
-        const storageRef = ref(storage, storagePath);
-        const uploadTask = uploadBytesResumable(storageRef, fileToUpload);
+        const storagePath = `uploads/${fileId}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
 
-        setUploadQueue(prev => prev.map(u => u.id === uploadId ? { ...u, task: uploadTask } : u));
+        // Upload to Supabase Storage
+        const { data, error: uploadError } = await supabase.storage
+          .from('media')
+          .upload(storagePath, fileToUpload, {
+            cacheControl: '3600',
+            upsert: false
+          });
 
-        uploadTask.on('state_changed', 
-          (snap) => {
-            const progress = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
-            setUploadQueue(prev => prev.map(u => u.id === uploadId ? { ...u, progress } : u));
-          },
-          (error) => {
-            setUploadQueue(prev => prev.map(u => u.id === uploadId ? { 
-              ...u, status: 'error', error: "Firebase: Zkontrolujte API klíč v db.ts" 
-            } : u));
-          },
-          async () => {
-            const url = await getDownloadURL(uploadTask.snapshot.ref);
-            const newItem: FileItem = {
-              id: fileId, name: file.name,
-              type: file.type.startsWith('image') ? 'image' : file.type.startsWith('video') ? 'video' : 'other',
-              size: `${(fileToUpload.size / (1024 * 1024)).toFixed(2)} MB`,
-              updatedAt: new Date().toISOString(), url, parentId: currentFolderId, specializationId: storagePath
-            };
-            await mediaDB.save(newItem);
-            setUploadQueue(prev => prev.map(u => u.id === uploadId ? { ...u, status: 'completed', progress: 100 } : u));
-            loadFiles();
-          }
-        );
+        if (uploadError) throw uploadError;
+
+        // Get public URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('media')
+          .getPublicUrl(storagePath);
+
+        setUploadQueue(prev => prev.map(u => u.id === uploadId ? { ...u, progress: 100, status: 'uploading' } : u));
+
+        const newItem: FileItem = {
+          id: fileId, name: file.name,
+          type: file.type.startsWith('image') ? 'image' : file.type.startsWith('video') ? 'video' : 'other',
+          size: `${(fileToUpload.size / (1024 * 1024)).toFixed(2)} MB`,
+          updatedAt: new Date().toISOString(), url: publicUrl, parentId: currentFolderId, specializationId: storagePath
+        };
+        await mediaDB.save(newItem);
+        setUploadQueue(prev => prev.map(u => u.id === uploadId ? { ...u, status: 'completed', progress: 100 } : u));
+        loadFiles();
       } catch (err: any) {
-        setUploadQueue(prev => prev.map(u => u.id === uploadId ? { ...u, status: 'error', error: err.message } : u));
+        setUploadQueue(prev => prev.map(u => u.id === uploadId ? { ...u, status: 'error', error: err.message || 'Upload failed' } : u));
       }
     }
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const cancelUpload = (id: string) => {
-    const item = uploadQueue.find(u => u.id === id);
-    if (item?.task) item.task.cancel();
     setUploadQueue(prev => prev.filter(u => u.id !== id));
   };
 

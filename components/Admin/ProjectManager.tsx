@@ -7,8 +7,8 @@ import {
   Bold, Italic, List
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { mediaDB, dataStore, storage, optimizeImage } from '../../lib/db';
-import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+import { mediaDB, dataStore, optimizeImage } from '../../lib/db';
+import { supabase } from '../../src/supabaseClient';
 
 const ProjectManager: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -95,29 +95,32 @@ const ProjectManager: React.FC = () => {
         }
 
         const fileId = 'm-' + Math.random().toString(36).substr(2, 9);
-        const sRef = ref(storage, `uploads/${fileId}_${file.name}`);
-        const task = uploadBytesResumable(sRef, fileToUpload);
+        const storagePath = `uploads/${fileId}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
         
-        await new Promise((resolve, reject) => {
-          task.on('state_changed', 
-            (snap) => {
-              const progress = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
-              setUploadProgress({ name: file.name, progress });
-            },
-            reject,
-            async () => {
-              const url = await getDownloadURL(task.snapshot.ref);
-              const newItem: FileItem = { 
-                id: fileId, name: file.name, 
-                type: file.type.startsWith('image') ? 'image' : 'video', 
-                url, parentId: pickerFolderId, updatedAt: new Date().toISOString() 
-              };
-              await mediaDB.save(newItem);
-              setAllItems(prev => [...prev, newItem]);
-              resolve(true);
-            }
-          );
-        });
+        // Upload to Supabase Storage
+        const { data, error: uploadError } = await supabase.storage
+          .from('media')
+          .upload(storagePath, fileToUpload, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (uploadError) throw uploadError;
+
+        // Get public URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('media')
+          .getPublicUrl(storagePath);
+
+        setUploadProgress({ name: file.name, progress: 100 });
+
+        const newItem: FileItem = { 
+          id: fileId, name: file.name, 
+          type: file.type.startsWith('image') ? 'image' : 'video', 
+          url: publicUrl, parentId: pickerFolderId, updatedAt: new Date().toISOString() 
+        };
+        await mediaDB.save(newItem);
+        setAllItems(prev => [...prev, newItem]);
       } catch (err) {
         console.error(err);
       }

@@ -145,15 +145,15 @@ const AdminDashboard: React.FC = () => {
               <div className="flex items-center gap-4">
                 <WifiOff size={18} />
                 <p className="text-[10px] font-black uppercase tracking-widest">
-                  Pozor: Firebase Cloud Firestore není aktivní. Aplikace běží v <span className="underline">offline režimu</span> (LocalStorage).
+                  Pozor: Supabase není aktivní. Aplikace běží v <span className="underline">offline režimu</span> (LocalStorage).
                 </p>
               </div>
               <a 
-                href="https://console.firebase.google.com/" 
+                href="https://supabase.com/dashboard" 
                 target="_blank" 
                 className="text-[9px] font-black uppercase tracking-widest bg-black/20 px-4 py-1.5 hover:bg-black/40 transition-all flex items-center gap-2"
               >
-                Aktivovat v Console <ExternalLink size={12} />
+                Aktivovat v Supabase <ExternalLink size={12} />
               </a>
             </motion.div>
           )}
@@ -207,7 +207,7 @@ const AdminDashboard: React.FC = () => {
                       <div className="space-y-2">
                         <h3 className="text-sm font-black uppercase tracking-widest">Backend vyžaduje nastavení</h3>
                         <p className="text-xs text-gray-500 font-medium leading-relaxed">
-                          Váš Firebase kód v <code className="bg-gray-100 px-1 rounded text-black">lib/db.ts</code> obsahuje placeholder klíče nebo Firestore API není aktivováno.
+                          Váš Supabase kód v <code className="bg-gray-100 px-1 rounded text-black">src/supabaseClient.ts</code> není správně nakonfigurován.
                           Nyní používáte LocalStorage – data se ukládají pouze ve vašem prohlížeči a nejsou sdílena s ostatními uživateli.
                         </p>
                         <div className="flex gap-4 pt-2">
@@ -285,7 +285,7 @@ const AdminDashboard: React.FC = () => {
                           <div className="absolute top-0 right-0 w-32 h-32 bg-[#007BFF] opacity-20 blur-3xl"></div>
                           <h3 className="text-xs font-black uppercase tracking-widest text-[#007BFF]">Data & Synchro</h3>
                           <p className="text-sm font-medium leading-relaxed opacity-70">
-                            {isOnline ? 'Vaše data jsou bezpečně uložena v Google Cloud Firestore.' : 'Aplikace aktuálně ukládá data do LocalStorage vašeho prohlížeče. Pro trvalé uložení v cloudu aktivujte Firebase API.'}
+                            {isOnline ? 'Vaše data jsou bezpečně uložena v Supabase.' : 'Aplikace aktuálně ukládá data do LocalStorage vašeho prohlížeče. Pro trvalé uložení v cloudu nakonfigurujte Supabase.'}
                           </p>
                           <button onClick={() => setActiveTab('settings')} className="text-[9px] font-black uppercase tracking-widest flex items-center gap-2 hover:text-[#007BFF] transition-colors">
                             {isOnline ? 'Export dat' : 'Nastavení připojení'} <ChevronRight size={14} />
