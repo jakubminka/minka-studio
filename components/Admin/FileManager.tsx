@@ -67,20 +67,30 @@ const FileManager: React.FC = () => {
         const fileId = 'm-' + Math.random().toString(36).substr(2, 9);
         const storagePath = `uploads/${fileId}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
 
-        // Upload to Supabase Storage
-        const { data, error: uploadError } = await supabase.storage
+        // Upload to Supabase Storage (log response for debugging)
+        console.log('Uploading to Supabase:', { bucket: 'media', storagePath, fileToUpload });
+        const uploadResp = await supabase.storage
           .from('media')
           .upload(storagePath, fileToUpload, {
             cacheControl: '3600',
             upsert: false
           });
 
-        if (uploadError) throw uploadError;
+        console.log('Supabase upload response:', uploadResp);
+
+        if (uploadResp.error) {
+          // show detailed error in UI console and queue
+          console.error('Supabase upload error:', uploadResp.error);
+          setUploadQueue(prev => prev.map(u => u.id === uploadId ? { ...u, status: 'error', error: uploadResp.error.message || 'Upload failed (400)' } : u));
+          continue;
+        }
 
         // Get public URL
-        const { data: { publicUrl } } = supabase.storage
+        const publicResp = supabase.storage
           .from('media')
           .getPublicUrl(storagePath);
+        console.log('Supabase publicUrl response:', publicResp);
+        const publicUrl = publicResp.data?.publicUrl || '';
 
         setUploadQueue(prev => prev.map(u => u.id === uploadId ? { ...u, progress: 100, status: 'uploading' } : u));
 
