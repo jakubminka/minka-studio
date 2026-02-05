@@ -9,6 +9,18 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+// Helper function to extract YouTube video ID
+const getYouTubeVideoId = (url: string): string | null => {
+  const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/);
+  return match ? match[1] : null;
+};
+
+// Helper function to convert YouTube URL to embed URL
+const getYouTubeEmbedUrl = (url: string): string => {
+  const videoId = getYouTubeVideoId(url);
+  return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
+};
+
 const ProjectDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -59,6 +71,13 @@ const ProjectDetail: React.FC = () => {
       default: return 'bg-[#007BFF]';
     }
   };
+
+  // Determine if we should show single video player
+  const singleVideoMode = useMemo(() => {
+    if (!project?.gallery || project.gallery.length !== 1) return null;
+    const item = project.gallery[0];
+    return item.type === 'video' ? item : null;
+  }, [project?.gallery]);
 
   const galleryLayout = useMemo(() => {
     if (!project?.gallery || project.gallery.length === 0) return [];
@@ -141,7 +160,33 @@ const ProjectDetail: React.FC = () => {
         </div>
       </section>
 
-      <section className="bg-white">
+      {/* Single Video Player Mode */}
+      {singleVideoMode && (
+        <section className="max-w-7xl mx-auto px-6 pb-32">
+          <div className="aspect-video w-full bg-black rounded-sm overflow-hidden shadow-2xl">
+            {singleVideoMode.source === 'youtube' ? (
+              <iframe
+                src={getYouTubeEmbedUrl(singleVideoMode.url)}
+                className="w-full h-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                title="Video"
+              />
+            ) : (
+              <video
+                src={singleVideoMode.url}
+                controls
+                className="w-full h-full"
+                autoPlay
+              />
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* Masonry Gallery Mode */}
+      {!singleVideoMode && galleryLayout.length > 0 && (
+        <section className="bg-white">
           <div className="w-full flex flex-wrap bg-white">
             {galleryLayout.map((item, idx) => (
               <div 
@@ -150,12 +195,45 @@ const ProjectDetail: React.FC = () => {
                 style={{ flexGrow: item.weight, flexBasis: window.innerWidth < 768 ? '100%' : `${item.weight * 300}px`, height: window.innerWidth < 768 ? '350px' : '550px' }}
                 onClick={() => setActiveLightboxIndex(idx)}
               >
-                <img src={item.url} className="w-full h-full object-cover group-hover:scale-105 transition-all duration-[2s]" alt="" />
-                {item.type === 'video' && <div className="absolute inset-0 flex items-center justify-center pointer-events-none"><div className="w-20 h-20 bg-[#007BFF]/90 backdrop-blur-xl rounded-full flex items-center justify-center text-white shadow-2xl transition-all group-hover:scale-110"><Play size={28} fill="currentColor" /></div></div>}
+                {item.type === 'video' && item.source !== 'youtube' ? (
+                  <>
+                    <video 
+                      src={item.url} 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-all duration-[2s]" 
+                      autoPlay 
+                      muted 
+                      loop 
+                      playsInline
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div className="w-20 h-20 bg-[#007BFF]/90 backdrop-blur-xl rounded-full flex items-center justify-center text-white shadow-2xl transition-all group-hover:scale-110">
+                        <Play size={28} fill="currentColor" />
+                      </div>
+                    </div>
+                  </>
+                ) : item.type === 'video' && item.source === 'youtube' ? (
+                  <>
+                    <img 
+                      src={`https://img.youtube.com/vi/${getYouTubeVideoId(item.url)}/maxresdefault.jpg`} 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-all duration-[2s]" 
+                      alt="" 
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div className="w-20 h-20 bg-[#FF0000]/90 backdrop-blur-xl rounded-full flex items-center justify-center text-white shadow-2xl transition-all group-hover:scale-110">
+                        <Play size={28} fill="currentColor" />
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <img src={item.url} className="w-full h-full object-cover group-hover:scale-105 transition-all duration-[2s]" alt="" />
+                  </>
+                )}
               </div>
             ))}
           </div>
-      </section>
+        </section>
+      )}
 
       <AnimatePresence>
         {activeLightboxIndex !== null && project.gallery && (
@@ -168,32 +246,48 @@ const ProjectDetail: React.FC = () => {
             </div>
             
             {/* Left Arrow */}
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                setActiveLightboxIndex(activeLightboxIndex === 0 ? project.gallery!.length - 1 : activeLightboxIndex - 1);
-              }}
-              className="absolute left-10 top-1/2 -translate-y-1/2 p-4 hover:bg-white/10 rounded-full text-white transition-all z-50"
-              title="Předchozí"
-            >
-              <ChevronLeft size={36} />
-            </button>
+            {project.gallery.length > 1 && (
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveLightboxIndex(activeLightboxIndex === 0 ? project.gallery!.length - 1 : activeLightboxIndex - 1);
+                }}
+                className="absolute left-10 top-1/2 -translate-y-1/2 p-4 hover:bg-white/10 rounded-full text-white transition-all z-50"
+                title="Předchozí"
+              >
+                <ChevronLeft size={36} />
+              </button>
+            )}
 
             {/* Right Arrow */}
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                setActiveLightboxIndex(activeLightboxIndex === project.gallery!.length - 1 ? 0 : activeLightboxIndex + 1);
-              }}
-              className="absolute right-10 top-1/2 -translate-y-1/2 p-4 hover:bg-white/10 rounded-full text-white transition-all z-50"
-              title="Další"
-            >
-              <ChevronRight size={36} />
-            </button>
+            {project.gallery.length > 1 && (
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveLightboxIndex(activeLightboxIndex === project.gallery!.length - 1 ? 0 : activeLightboxIndex + 1);
+                }}
+                className="absolute right-10 top-1/2 -translate-y-1/2 p-4 hover:bg-white/10 rounded-full text-white transition-all z-50"
+                title="Další"
+              >
+                <ChevronRight size={36} />
+              </button>
+            )}
 
             <div className="w-full h-full flex items-center justify-center max-w-7xl mx-auto" onClick={e => e.stopPropagation()}>
                {project.gallery[activeLightboxIndex].type === 'video' ? (
-                 <video src={project.gallery[activeLightboxIndex].url} autoPlay controls className="max-w-full max-h-[90vh] object-contain shadow-2xl" />
+                 project.gallery[activeLightboxIndex].source === 'youtube' ? (
+                   <div className="aspect-video w-full max-w-6xl bg-black rounded-sm overflow-hidden shadow-2xl">
+                     <iframe
+                       src={getYouTubeEmbedUrl(project.gallery[activeLightboxIndex].url)}
+                       className="w-full h-full"
+                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                       allowFullScreen
+                       title="Video"
+                     />
+                   </div>
+                 ) : (
+                   <video src={project.gallery[activeLightboxIndex].url} autoPlay controls className="max-w-full max-h-[90vh] object-contain shadow-2xl" />
+                 )
                ) : (
                  <img src={project.gallery[activeLightboxIndex].url} className="max-w-full max-h-[90vh] object-contain shadow-2xl" alt="" />
                )}
