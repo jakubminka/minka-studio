@@ -16,6 +16,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { dataStore } from '../../lib/db';
 
 const ReviewManager: React.FC = () => {
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -32,22 +33,43 @@ const ReviewManager: React.FC = () => {
     date: ''
   });
 
-  useEffect(() => {
-    const saved = localStorage.getItem('jakub_minka_reviews');
-    if (saved) {
-      setReviews(JSON.parse(saved));
-    } else {
-      setReviews(INITIAL_REVIEWS);
-      localStorage.setItem('jakub_minka_reviews', JSON.stringify(INITIAL_REVIEWS));
+  const loadData = async () => {
+    // Try to migrate from old localStorage key
+    const oldData = localStorage.getItem('jakub_minka_reviews');
+    if (oldData) {
+      const oldReviews = JSON.parse(oldData);
+      for (const review of oldReviews) {
+        await dataStore.collection('reviews').save(review);
+      }
+      localStorage.removeItem('jakub_minka_reviews'); // Remove old data
     }
-  }, []);
 
-  const saveToStorage = (updated: Review[]) => {
-    setReviews(updated);
-    localStorage.setItem('jakub_minka_reviews', JSON.stringify(updated));
+    // Load from dataStore
+    const saved = await dataStore.collection('reviews').getAll();
+    if (saved && saved.length > 0) {
+      setReviews(saved);
+    } else {
+      // Initialize with default reviews if none exist
+      for (const review of INITIAL_REVIEWS) {
+        await dataStore.collection('reviews').save(review);
+      }
+      setReviews(INITIAL_REVIEWS);
+    }
   };
 
-  const handleAddReview = (e: React.FormEvent) => {
+  useEffect(() => { loadData(); }, []);
+
+  const saveReview = async (review: Review) => {
+    await dataStore.collection('reviews').save(review);
+    await loadData();
+  };
+
+  const deleteReview = async (id: string) => {
+    await dataStore.collection('reviews').delete(id);
+    await loadData();
+  };
+
+  const handleAddReview = async (e: React.FormEvent) => {
     e.preventDefault();
     const newReview: Review = {
       id: Math.random().toString(36).substr(2, 9),
@@ -58,14 +80,14 @@ const ReviewManager: React.FC = () => {
       date: formData.date || new Date().toLocaleDateString('cs-CZ', { year: 'numeric', month: 'long' })
     };
 
-    saveToStorage([newReview, ...reviews]);
+    await saveReview(newReview);
     setShowForm(false);
     setFormData({ author: '', text: '', rating: 5, platform: 'google', date: '' });
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('Opravdu chcete tuto recenzi smazat?')) {
-      saveToStorage(reviews.filter(r => r.id !== id));
+      await deleteReview(id);
     }
   };
 
@@ -74,12 +96,14 @@ const ReviewManager: React.FC = () => {
     setFormData(review);
   };
 
-  const handleUpdate = (e: React.FormEvent) => {
+  const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    const updated = reviews.map(r => r.id === isEditing ? { ...r, ...formData } : r);
-    saveToStorage(updated as Review[]);
-    setIsEditing(null);
-    setFormData({ author: '', text: '', rating: 5, platform: 'google', date: '' });
+    const reviewToUpdate = reviews.find(r => r.id === isEditing);
+    if (reviewToUpdate) {
+      await saveReview({ ...reviewToUpdate, ...formData } as Review);
+      setIsEditing(null);
+      setFormData({ author: '', text: '', rating: 5, platform: 'google', date: '' });
+    }
   };
 
   const filteredReviews = reviews.filter(r => 
