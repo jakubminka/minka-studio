@@ -40,7 +40,9 @@ const ProjectManagerV2: React.FC = () => {
     thumbnailSource: 'pc',
     gallery: [],
     servicesDelivered: '',
-    youtubeUrl: ''
+    youtubeUrl: '',
+    websiteUrl: '',
+    websiteLabel: ''
   });
   
   const [youtubeUrls, setYoutubeUrls] = useState<string[]>([]);
@@ -351,6 +353,8 @@ const ProjectManagerV2: React.FC = () => {
         thumbnailSource: 'storage',
         gallery: combinedGallery,
         servicesDelivered: formData.servicesDelivered || '',
+        websiteUrl: formData.websiteUrl || '',
+        websiteLabel: formData.websiteLabel || '',
         youtubeUrl: '' // Keep for backward compatibility but not used
       };
 
@@ -389,7 +393,9 @@ const ProjectManagerV2: React.FC = () => {
       thumbnailUrl: '',
       thumbnailSource: 'pc',
       gallery: [],
-      servicesDelivered: ''
+      servicesDelivered: '',
+      websiteUrl: '',
+      websiteLabel: ''
     });
     setYoutubeUrls([]);
   };
@@ -646,6 +652,33 @@ const ProjectManagerV2: React.FC = () => {
                     value={formData.servicesDelivered || ''}
                     onChange={e => setFormData(p => ({ ...p, servicesDelivered: e.target.value }))}
                     placeholder="Fotografie, editace, produkce, atd..."
+                    className="w-full border-2 border-gray-200 p-4 font-bold text-black outline-none focus:border-[#007BFF]"
+                  />
+                </div>
+
+                {/* Client Website */}
+                <div>
+                  <label className="text-[10px] font-black uppercase text-gray-400 block mb-2">
+                    Odkaz na web klienta (volitelné)
+                  </label>
+                  <input
+                    type="url"
+                    value={formData.websiteUrl || ''}
+                    onChange={e => setFormData(p => ({ ...p, websiteUrl: e.target.value }))}
+                    placeholder="https://www.klient.cz"
+                    className="w-full border-2 border-gray-200 p-4 font-bold text-black outline-none focus:border-[#007BFF]"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black uppercase text-gray-400 block mb-2">
+                    Text tlačítka (volitelné)
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.websiteLabel || ''}
+                    onChange={e => setFormData(p => ({ ...p, websiteLabel: e.target.value }))}
+                    placeholder="Navštívit web"
                     className="w-full border-2 border-gray-200 p-4 font-bold text-black outline-none focus:border-[#007BFF]"
                   />
                 </div>

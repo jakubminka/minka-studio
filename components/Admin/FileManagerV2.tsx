@@ -31,6 +31,9 @@ interface ContextMenu {
   itemId: string;
 }
 
+const VIDEO_MAX_MB = 200;
+const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
+
 const FileManagerV2: React.FC = () => {
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -98,6 +101,20 @@ const FileManagerV2: React.FC = () => {
         const folderName = existingFile.parentId ? items.find(f => f.id === existingFile.parentId)?.name || 'neznámá složka' : 'kořen';
         alert(`❌ Soubor "${file.name}" již existuje v systému (složka: ${folderName}). Duplicitní soubory nejsou povoleny.`);
         continue; // Skip this file
+      }
+
+      if (file.type.startsWith('video/')) {
+        if (!ALLOWED_VIDEO_TYPES.includes(file.type)) {
+          alert(`❌ Nepodporovaný formát videa: ${file.type}.
+Použijte prosím MP4 nebo WebM.`);
+          continue;
+        }
+        const maxBytes = VIDEO_MAX_MB * 1024 * 1024;
+        if (file.size > maxBytes) {
+          alert(`❌ Video "${file.name}" je příliš velké (${(file.size / (1024 * 1024)).toFixed(0)} MB).
+Maximální velikost je ${VIDEO_MAX_MB} MB. Doporučuji export do MP4 (H.264) a snížení bitrate.`);
+          continue;
+        }
       }
 
       const uploadId = Math.random().toString(36).substr(2, 9);

@@ -55,7 +55,8 @@ const Home: React.FC = () => {
       text: item.text || item.content || '',
       rating: typeof item.rating === 'number' ? item.rating : 5,
       platform: item.platform || item.company || 'manual',
-      date: item.date || ''
+      date: item.date || '',
+      companyUrl: item.company_url || item.companyUrl || ''
     } as Review;
   };
 
@@ -119,6 +120,8 @@ const Home: React.FC = () => {
     });
     return map;
   }, [heroProjects]);
+
+  const maxReviewIndex = Math.max(shuffledReviews.length - 4, 0);
 
   const handleMouseMove = (e: React.MouseEvent) => {
     mouseX.set(e.clientX);
@@ -373,6 +376,16 @@ const Home: React.FC = () => {
                       <span className="text-[8px] font-bold text-[#007BFF] uppercase tracking-widest mt-1 block">
                         {review.platform === 'google' ? 'GOOGLE MAPS' : review.platform === 'firmy' ? 'FIRMY.CZ' : 'OVĚŘENO'}
                       </span>
+                      {review.companyUrl && (
+                        <a
+                          href={review.companyUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-2 inline-flex items-center gap-2 text-[8px] font-black uppercase tracking-widest text-[#007BFF] hover:text-black"
+                        >
+                          <ExternalLink size={10} /> Web firmy
+                        </a>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -381,15 +394,23 @@ const Home: React.FC = () => {
               // Carousel for more than 4 reviews - show 4 at a time
               <div className="space-y-8">
                 <div className="relative">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {shuffledReviews.slice(currentReviewIndex, currentReviewIndex + 4).map((review, idx) => (
-                      <motion.div
-                        key={review.id || idx}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3, delay: idx * 0.1 }}
-                        className="bg-gray-50 p-8 border border-gray-100 relative group hover:border-[#007BFF] transition-all duration-500 shadow-sm flex flex-col justify-between"
-                      >
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={currentReviewIndex}
+                      initial={{ opacity: 0, y: 16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -16 }}
+                      transition={{ duration: 0.35, ease: 'easeOut' }}
+                      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+                    >
+                      {shuffledReviews.slice(currentReviewIndex, currentReviewIndex + 4).map((review, idx) => (
+                        <motion.div
+                          key={review.id || idx}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3, delay: idx * 0.08 }}
+                          className="bg-gray-50 p-8 border border-gray-100 relative group hover:border-[#007BFF] transition-all duration-500 shadow-sm flex flex-col justify-between"
+                        >
                         <Quote className="absolute top-4 right-4 text-[#007BFF]/5 group-hover:text-[#007BFF]/10 transition-colors" size={32} />
                         <div>
                           <div className="flex gap-1 mb-6">
@@ -404,10 +425,21 @@ const Home: React.FC = () => {
                           <span className="text-[8px] font-bold text-[#007BFF] uppercase tracking-widest mt-1 block">
                             {review.platform === 'google' ? 'GOOGLE MAPS' : review.platform === 'firmy' ? 'FIRMY.CZ' : 'OVĚŘENO'}
                           </span>
+                          {review.companyUrl && (
+                            <a
+                              href={review.companyUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="mt-2 inline-flex items-center gap-2 text-[8px] font-black uppercase tracking-widest text-[#007BFF] hover:text-black"
+                            >
+                              <ExternalLink size={10} /> Web firmy
+                            </a>
+                          )}
                         </div>
-                      </motion.div>
-                    ))}
-                  </div>
+                        </motion.div>
+                      ))}
+                    </motion.div>
+                  </AnimatePresence>
 
                   {/* Navigation Arrows */}
                   {shuffledReviews.length > 4 && (
@@ -420,8 +452,8 @@ const Home: React.FC = () => {
                         <ArrowLeft size={20} />
                       </button>
                       <button
-                        onClick={() => setCurrentReviewIndex((prev) => Math.min(shuffledReviews.length - 4, prev + 1))}
-                        disabled={currentReviewIndex >= shuffledReviews.length - 4}
+                        onClick={() => setCurrentReviewIndex((prev) => Math.min(maxReviewIndex, prev + 1))}
+                        disabled={currentReviewIndex >= maxReviewIndex}
                         className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-16 md:translate-x-20 w-12 h-12 flex items-center justify-center rounded-full bg-[#007BFF] text-white hover:bg-black transition-all shadow-lg disabled:opacity-30 disabled:cursor-not-allowed"
                       >
                         <ArrowRight size={20} />
@@ -433,7 +465,7 @@ const Home: React.FC = () => {
                 {/* Breadcrumbs - dots for each possible position */}
                 {shuffledReviews.length > 4 && (
                   <div className="flex justify-center gap-3">
-                    {[...Array(shuffledReviews.length - 3)].map((_, idx) => (
+                    {[...Array(maxReviewIndex + 1)].map((_, idx) => (
                       <button
                         key={idx}
                         onClick={() => setCurrentReviewIndex(idx)}

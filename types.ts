@@ -45,6 +45,8 @@ export interface Project {
   weight?: number;
   servicesDelivered?: string;
   youtubeUrl?: string;
+  websiteUrl?: string;
+  websiteLabel?: string;
 }
 
 export interface BlogPost {
@@ -147,6 +149,7 @@ export interface Review {
   rating: number;
   platform: 'google' | 'firmy' | 'manual';
   date: string;
+  companyUrl?: string;
 }
 
 export interface Inquiry {

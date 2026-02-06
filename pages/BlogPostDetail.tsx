@@ -117,7 +117,8 @@ const BlogPostDetail: React.FC = () => {
                      prose-a:text-[#007BFF] prose-a:no-underline hover:prose-a:underline
                      prose-ul:list-disc prose-li:mb-2
                      [&_img]:w-full [&_img]:max-w-3xl [&_img]:mx-auto [&_img]:my-8 [&_img]:shadow-2xl [&_img]:border [&_img]:border-gray-100 [&_img]:rounded-sm [&_img]:block
-                     [&_video]:w-full [&_video]:max-w-3xl [&_video]:mx-auto [&_video]:my-8 [&_video]:shadow-2xl [&_video]:rounded-sm [&_video]:block"
+                     [&_video]:w-full [&_video]:max-w-3xl [&_video]:mx-auto [&_video]:my-8 [&_video]:shadow-2xl [&_video]:rounded-sm [&_video]:block
+                     [&_iframe]:w-full [&_iframe]:max-w-3xl [&_iframe]:mx-auto [&_iframe]:my-8 [&_iframe]:shadow-2xl [&_iframe]:rounded-sm [&_iframe]:block"
           dangerouslySetInnerHTML={{ __html: processedContent }}
         />
         

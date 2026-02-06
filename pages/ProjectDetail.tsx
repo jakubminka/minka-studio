@@ -5,7 +5,7 @@ import { Project, MediaType, GalleryItem } from '../types';
 import { PROJECTS as DEFAULT_PROJECTS } from '../constants';
 import { projectDB } from '../lib/db';
 import { 
-  ArrowLeft, ChevronRight, ChevronLeft, Play, PackageCheck, X, Maximize2, Camera, Layers
+  ArrowLeft, ChevronRight, ChevronLeft, Play, PackageCheck, X, Maximize2, Camera, Layers, ExternalLink
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -201,7 +201,19 @@ const ProjectDetail: React.FC = () => {
                   </div>
                 ))}
               </div>
-              <Link to="/kontakt" className="block w-full bg-black text-white py-6 text-center text-[11px] font-black uppercase tracking-[0.4em] hover:bg-[#007BFF] transition-all shadow-xl mt-8">POPTAT PODOBNÝ PROJEKT</Link>
+              {project.websiteUrl && (
+                <a
+                  href={project.websiteUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block w-full border-2 border-[#007BFF] text-[#007BFF] py-5 text-center text-[10px] font-black uppercase tracking-[0.4em] hover:bg-[#007BFF] hover:text-white transition-all shadow-xl mt-8"
+                >
+                  <span className="inline-flex items-center justify-center gap-2">
+                    <ExternalLink size={14} /> {project.websiteLabel || 'NAVŠTÍVIT WEB'}
+                  </span>
+                </a>
+              )}
+              <Link to="/kontakt" className="block w-full bg-black text-white py-6 text-center text-[11px] font-black uppercase tracking-[0.4em] hover:bg-[#007BFF] transition-all shadow-xl mt-6">POPTAT PODOBNÝ PROJEKT</Link>
            </div>
         </div>
       </section>

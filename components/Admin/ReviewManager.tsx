@@ -28,7 +28,8 @@ const ReviewManager: React.FC = () => {
     text: '',
     rating: 5,
     platform: 'google',
-    date: ''
+    date: '',
+    companyUrl: ''
   });
 
   const mapFromDb = (item: any): Review => {
@@ -58,7 +59,8 @@ const ReviewManager: React.FC = () => {
       text: item.text || item.content || '',
       rating: typeof item.rating === 'number' ? item.rating : 5,
       platform: item.platform || item.company || 'manual',
-      date: displayDate
+      date: displayDate,
+      companyUrl: item.company_url || item.companyUrl || ''
     } as Review;
   };
 
@@ -86,6 +88,7 @@ const ReviewManager: React.FC = () => {
       content: review.text,
       rating: review.rating,
       company: review.platform,
+      company_url: review.companyUrl || null,
       date: dateValue,
       created_at: now,
       updated_at: now
@@ -166,12 +169,13 @@ const ReviewManager: React.FC = () => {
         text: formData.text || '',
         rating: formData.rating || 5,
         platform: formData.platform as any || 'manual',
-        date: new Date().toISOString()
+        date: new Date().toISOString(),
+        companyUrl: formData.companyUrl || ''
       };
 
       await saveReview(newReview);
       setShowForm(false);
-      setFormData({ author: '', text: '', rating: 5, platform: 'google', date: '' });
+      setFormData({ author: '', text: '', rating: 5, platform: 'google', date: '', companyUrl: '' });
     } catch (error) {
       console.error('Error adding review:', error);
       alert('Chyba při přidání recenze. Zkuste to prosím znovu.');
@@ -195,7 +199,7 @@ const ReviewManager: React.FC = () => {
     if (reviewToUpdate) {
       await saveReview({ ...reviewToUpdate, ...formData } as Review);
       setIsEditing(null);
-      setFormData({ author: '', text: '', rating: 5, platform: 'google', date: '' });
+      setFormData({ author: '', text: '', rating: 5, platform: 'google', date: '', companyUrl: '' });
     }
   };
 
@@ -257,6 +261,17 @@ const ReviewManager: React.FC = () => {
                   required
                   className="w-full bg-gray-50 border border-gray-100 p-4 text-sm focus:outline-none focus:border-[#007BFF]"
                   placeholder="např. Jan Novák, Škoda Auto"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Odkaz na firmu (volitelné)</label>
+                <input 
+                  type="url" 
+                  value={formData.companyUrl}
+                  onChange={e => setFormData({...formData, companyUrl: e.target.value})}
+                  className="w-full bg-gray-50 border border-gray-100 p-4 text-sm focus:outline-none focus:border-[#007BFF]"
+                  placeholder="https://www.firma.cz"
                 />
               </div>
               
@@ -348,6 +363,13 @@ const ReviewManager: React.FC = () => {
                     <option value="manual">Vlastní</option>
                   </select>
                 </div>
+                <input
+                  type="url"
+                  value={formData.companyUrl}
+                  onChange={e => setFormData({...formData, companyUrl: e.target.value})}
+                  placeholder="https://www.firma.cz"
+                  className="w-full border-b border-gray-200 py-2 focus:outline-none focus:border-[#007BFF] text-xs"
+                />
                 <textarea 
                   value={formData.text}
                   onChange={e => setFormData({...formData, text: e.target.value})}
@@ -385,6 +407,16 @@ const ReviewManager: React.FC = () => {
                   <div>
                     <h4 className="font-black text-[10px] uppercase tracking-widest text-gray-900">{review.author}</h4>
                     <span className="text-[8px] font-bold text-gray-400 uppercase tracking-[0.2em]">{review.date}</span>
+                    {review.companyUrl && (
+                      <a
+                        href={review.companyUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-2 inline-flex items-center gap-2 text-[8px] font-black uppercase tracking-widest text-[#007BFF] hover:text-black"
+                      >
+                        <ExternalLink size={10} /> Web firmy
+                      </a>
+                    )}
                   </div>
                   <div className="bg-gray-50 px-3 py-1 rounded-full">
                     <span className="text-[8px] font-black uppercase tracking-widest text-[#007BFF]">

@@ -7,7 +7,11 @@ import {
   Image as LucideImage, Video as LucideVideo, CheckSquare, RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { mediaDB, dataStore } from '../../lib/db';
+import { mediaDB, dataStore, optimizeImage } from '../../lib/db';
+import { supabase } from '../../src/supabaseClient';
+
+const VIDEO_MAX_MB = 200;
+const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
 
 const BlogManager: React.FC = () => {
   const [posts, setPosts] = useState<BlogPost[]>([]);
@@ -18,8 +22,11 @@ const BlogManager: React.FC = () => {
   const [showPicker, setShowPicker] = useState(false);
   const [pickerMode, setPickerMode] = useState<'cover' | 'content'>('cover');
   const [allItems, setAllItems] = useState<FileItem[]>([]);
+  const [youtubeUrlInput, setYoutubeUrlInput] = useState('');
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
 
   const editorRef = useRef<HTMLDivElement>(null);
+  const uploadInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState<Partial<BlogPost>>({
     title: '', content: '', excerpt: '', coverImage: '', date: new Date().toISOString().split('T')[0],
     author: 'Jakub Minka', tags: []
@@ -40,6 +47,25 @@ const BlogManager: React.FC = () => {
     setShowPicker(true);
   };
 
+  const getYouTubeVideoId = (url: string): string | null => {
+    const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/);
+    return match ? match[1] : null;
+  };
+
+  const getYouTubeEmbedUrl = (url: string): string => {
+    const videoId = getYouTubeVideoId(url);
+    return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
+  };
+
+  const normalizeQuality = (raw: number) => (raw > 1 ? raw / 100 : raw);
+
+  const insertHtml = (html: string) => {
+    if (!editorRef.current) return;
+    editorRef.current.focus();
+    document.execCommand('insertHTML', false, html);
+    document.execCommand('insertHTML', false, '<p><br></p>');
+  };
+
   const handleEditorCommand = (command: string, value: string = '') => {
     if (editorRef.current) {
       editorRef.current.focus();
@@ -56,15 +82,101 @@ const BlogManager: React.FC = () => {
     if (pickerMode === 'cover') {
       setFormData({ ...formData, coverImage: item.url });
     } else if (editorRef.current) {
-      editorRef.current.focus();
       const html = item.type === 'video' 
-        ? `<div class="my-8 w-full max-w-3xl mx-auto"><video src="${item.url}" controls class="w-full shadow-2xl rounded-sm"></video></div>`
+        ? `<div class="my-8 w-full max-w-3xl mx-auto aspect-video"><video src="${item.url}" controls class="w-full h-full shadow-2xl rounded-sm"></video></div>`
         : `<img src="${item.url}" alt="" class="w-full max-w-3xl mx-auto my-8 shadow-2xl border border-gray-100 rounded-sm block" />`;
-      document.execCommand('insertHTML', false, html);
-      // Add a line break after
-      document.execCommand('insertHTML', false, '<p><br></p>');
+      insertHtml(html);
     }
     setShowPicker(false);
+  };
+
+  const insertYouTubeVideo = () => {
+    if (!youtubeUrlInput.trim()) return;
+    const videoId = getYouTubeVideoId(youtubeUrlInput.trim());
+    if (!videoId) {
+      alert('Neplatný YouTube odkaz.');
+      return;
+    }
+    const html = `<div class="video-embed my-8 w-full max-w-3xl mx-auto aspect-video"><iframe src="${getYouTubeEmbedUrl(youtubeUrlInput.trim())}" class="w-full h-full" allow="autoplay; encrypted-media" allowfullscreen></iframe></div>`;
+    insertHtml(html);
+    setYoutubeUrlInput('');
+    setShowPicker(false);
+  };
+
+  const uploadMediaFromPc = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const fileList = Array.from(files) as File[];
+    const rawQuality = parseFloat(localStorage.getItem('jakub_minka_compression_quality') || '0.8');
+    const quality = normalizeQuality(rawQuality);
+
+    for (const file of fileList) {
+      const fileName = file.name.split('.')[0];
+      const existingFile = allItems.find(i => i.name === fileName && i.type !== 'folder');
+      if (existingFile) {
+        alert(`❌ Soubor "${file.name}" už existuje v médiích. Duplicitní soubory nejsou povoleny.`);
+        continue;
+      }
+
+      if (file.type.startsWith('video/')) {
+        if (!ALLOWED_VIDEO_TYPES.includes(file.type)) {
+          alert(`❌ Nepodporovaný formát videa: ${file.type}.
+Použijte prosím MP4 nebo WebM.`);
+          continue;
+        }
+        const maxBytes = VIDEO_MAX_MB * 1024 * 1024;
+        if (file.size > maxBytes) {
+          alert(`❌ Video "${file.name}" je příliš velké (${(file.size / (1024 * 1024)).toFixed(0)} MB).
+Maximální velikost je ${VIDEO_MAX_MB} MB. Doporučuji export do MP4 (H.264) a snížení bitrate.`);
+          continue;
+        }
+      }
+
+      setIsUploadingMedia(true);
+      try {
+        let fileToUpload: Blob | File = file;
+        if (file.type.startsWith('image/')) {
+          fileToUpload = await optimizeImage(file, quality);
+        }
+
+        const fileId = 'm-' + Math.random().toString(36).substr(2, 9);
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const storagePath = `uploads/${fileId}_${safeName}`;
+
+        const uploadResp = await supabase.storage
+          .from('media')
+          .upload(storagePath, fileToUpload, { cacheControl: '3600', upsert: true });
+
+        if (uploadResp.error) {
+          alert(`Chyba při uploadu: ${uploadResp.error.message}`);
+          continue;
+        }
+
+        const publicResp = supabase.storage.from('media').getPublicUrl(storagePath);
+        const publicUrl = publicResp.data?.publicUrl || '';
+
+        const newItem: FileItem = {
+          id: fileId,
+          name: fileName,
+          type: file.type.startsWith('image') ? 'image' : file.type.startsWith('video') ? 'video' : 'other',
+          size: `${(fileToUpload.size / (1024 * 1024)).toFixed(2)} MB`,
+          url: publicUrl,
+          parentId: null,
+          specializationId: storagePath,
+          updatedAt: new Date().toISOString()
+        };
+
+        await mediaDB.save(newItem);
+        setAllItems(prev => [newItem, ...prev]);
+        insertMedia(newItem);
+      } catch (err) {
+        console.error('Upload error:', err);
+        alert('Chyba při nahrávání souboru.');
+      } finally {
+        setIsUploadingMedia(false);
+      }
+    }
+
+    if (uploadInputRef.current) uploadInputRef.current.value = '';
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -79,7 +191,10 @@ const BlogManager: React.FC = () => {
       coverImage: formData.coverImage || '',
       date: formData.date || new Date().toISOString(),
       author: formData.author || 'Jakub Minka',
-      tags: formData.tags || []
+      tags: formData.tags || [],
+      seoTitle: formData.seoTitle || '',
+      seoDescription: formData.seoDescription || '',
+      seoKeywords: formData.seoKeywords || ''
     };
     await dataStore.collection('blog').save(postData);
     setIsProcessing(false);
@@ -196,10 +311,55 @@ const BlogManager: React.FC = () => {
                   <h3 className="text-xl font-black uppercase">Knihovna médií</h3>
                   <button onClick={()=>setShowPicker(false)} className="text-black hover:text-red-500"><X size={32}/></button>
                </div>
+               <div className="p-6 border-b bg-white">
+                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-end">
+                   <div className="lg:col-span-2">
+                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-2">YouTube odkaz</label>
+                     <div className="flex gap-3">
+                       <input
+                         type="url"
+                         value={youtubeUrlInput}
+                         onChange={e => setYoutubeUrlInput(e.target.value)}
+                         placeholder="https://www.youtube.com/watch?v=..."
+                         className="flex-1 border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:border-[#007BFF]"
+                       />
+                       <button
+                         type="button"
+                         onClick={insertYouTubeVideo}
+                         className="bg-[#007BFF] text-white px-6 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all"
+                       >
+                         Vložit video
+                       </button>
+                     </div>
+                   </div>
+                   <div className="flex justify-start lg:justify-end">
+                     <input
+                       ref={uploadInputRef}
+                       type="file"
+                       accept="image/*,video/*"
+                       multiple
+                       className="hidden"
+                       onChange={(e) => uploadMediaFromPc(e.target.files)}
+                     />
+                     <button
+                       type="button"
+                       onClick={() => uploadInputRef.current?.click()}
+                       disabled={isUploadingMedia}
+                       className="border-2 border-[#007BFF] text-[#007BFF] px-6 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-blue-50 disabled:opacity-60"
+                     >
+                       {isUploadingMedia ? 'Nahrávám...' : 'Nahrát z PC'}
+                     </button>
+                   </div>
+                 </div>
+               </div>
                <div className="p-10 grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-6 overflow-y-auto bg-gray-50/20">
                   {allItems.filter(i => i.type !== 'folder').map(item => (
                     <div key={item.id} onClick={() => insertMedia(item)} className="relative aspect-square border-2 border-transparent hover:border-[#007BFF] transition-all p-1 cursor-pointer bg-white group shadow-sm">
-                       <img src={item.url} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all"/>
+                       {item.type === 'video' ? (
+                         <video src={item.url} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all" />
+                       ) : (
+                         <img src={item.url} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all"/>
+                       )}
                     </div>
                   ))}
                </div>
