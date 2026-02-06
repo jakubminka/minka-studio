@@ -15,6 +15,7 @@ const Home: React.FC = () => {
   const [partners, setPartners] = useState<{id: string, name: string}[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [currentReviewIndex, setCurrentReviewIndex] = useState(0);
+  const [reviewDirection, setReviewDirection] = useState<1 | -1>(1);
   
   // Shuffle reviews randomly on load
   const shuffledReviews = useMemo(() => {
@@ -104,22 +105,66 @@ const Home: React.FC = () => {
 
   const heroProjects = useMemo(() => projects.slice(0, 5), [projects]);
 
-  const pickRandomProjectImage = (project: Project): string => {
+  const getYouTubeVideoId = (url: string): string | null => {
+    const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/);
+    return match ? match[1] : null;
+  };
+
+  const getYouTubeEmbedUrl = (url: string): string => {
+    const videoId = getYouTubeVideoId(url);
+    return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
+  };
+
+  const pickProjectHeroMedia = (project: Project): { type: 'image' | 'video' | 'youtube'; url: string } => {
+    const galleryVideo = (project.gallery || []).find(item => item.type === 'video');
+    if (galleryVideo) {
+      if (galleryVideo.source === 'youtube') {
+        if (project.youtubeCoverUrl) {
+          return { type: 'image', url: project.youtubeCoverUrl };
+        }
+        return { type: 'youtube', url: galleryVideo.url };
+      }
+      return { type: 'video', url: galleryVideo.url };
+    }
+
     const galleryImages = (project.gallery || []).filter(item => item.type === 'image');
     if (galleryImages.length > 0) {
       const randomImage = galleryImages[Math.floor(Math.random() * galleryImages.length)];
-      return randomImage.url;
+      return { type: 'image', url: randomImage.url };
     }
-    return project.thumbnailUrl;
+    return { type: 'image', url: project.thumbnailUrl };
   };
 
-  const heroImages = useMemo(() => {
-    const map = new Map<string, string>();
+  const heroMedia = useMemo(() => {
+    const map = new Map<string, { type: 'image' | 'video' | 'youtube'; url: string }>();
     heroProjects.forEach(project => {
-      map.set(project.id, pickRandomProjectImage(project));
+      map.set(project.id, pickProjectHeroMedia(project));
     });
     return map;
   }, [heroProjects]);
+
+  const specCovers = useMemo(() => {
+    const map = new Map<string, string>();
+    SPECIALIZATIONS.forEach(spec => {
+      const specProjects = projects.filter(p => p.categoryId === spec.id);
+      if (specProjects.length === 0) return;
+      const project = specProjects[Math.floor(Math.random() * specProjects.length)];
+      const galleryImages = (project.gallery || []).filter(item => item.type === 'image');
+      if (galleryImages.length > 0) {
+        const randomImage = galleryImages[Math.floor(Math.random() * galleryImages.length)];
+        map.set(spec.id, randomImage.url);
+        return;
+      }
+      if (project.youtubeCoverUrl) {
+        map.set(spec.id, project.youtubeCoverUrl);
+        return;
+      }
+      if (project.thumbnailUrl) {
+        map.set(spec.id, project.thumbnailUrl);
+      }
+    });
+    return map;
+  }, [projects]);
 
   const maxReviewIndex = Math.max(shuffledReviews.length - 4, 0);
 
@@ -176,12 +221,45 @@ const Home: React.FC = () => {
         <div className="absolute inset-y-0 right-0 w-[15%] z-30 cursor-none" onClick={handleNext}></div>
 
         <div className="absolute inset-0 z-0 h-full w-full">
-          {heroProjects.length > 0 ? heroProjects.map((project, idx) => (
-            <div key={`bg-${project.id}`} className={`absolute inset-0 h-full w-full transition-opacity duration-[1500ms] ease-in-out ${idx === currentSlide ? 'opacity-100' : 'opacity-0'}`}>
-              <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-black/60 z-10"></div>
-              <img src={heroImages.get(project.id) || project.thumbnailUrl} alt="" className="w-full h-full object-cover" />
-            </div>
-          )) : (
+          {heroProjects.length > 0 ? heroProjects.map((project, idx) => {
+            const media = heroMedia.get(project.id);
+            return (
+              <div key={`bg-${project.id}`} className={`absolute inset-0 h-full w-full transition-opacity duration-[1500ms] ease-in-out ${idx === currentSlide ? 'opacity-100' : 'opacity-0'}`}>
+                <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-black/60 z-10"></div>
+                {media?.type === 'video' ? (
+                  <video
+                    src={media.url}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                ) : media?.type === 'youtube' ? (
+                  <div className="absolute inset-0 w-full h-full overflow-hidden">
+                    <iframe
+                      src={`${getYouTubeEmbedUrl(media.url)}?autoplay=1&mute=1&loop=1&playlist=${getYouTubeVideoId(media.url)}&controls=0&showinfo=0&modestbranding=1&playsinline=1&fs=0&rel=0&iv_load_policy=3&disablekb=1`}
+                      className="absolute"
+                      style={{
+                        top: '50%',
+                        left: '50%',
+                        width: '177.77777778vh',
+                        height: '56.25vw',
+                        minHeight: '100%',
+                        minWidth: '100%',
+                        transform: 'translate(-50%, -50%)',
+                        pointerEvents: 'none'
+                      }}
+                      allow="autoplay; encrypted-media"
+                    />
+                    <div className="absolute inset-0" style={{ pointerEvents: 'auto' }}></div>
+                  </div>
+                ) : (
+                  <img src={media?.url || project.thumbnailUrl} alt="" className="w-full h-full object-cover" />
+                )}
+              </div>
+            );
+          }) : (
             <div className="absolute inset-0 h-full w-full">
               <div className="absolute inset-0 bg-black/50 z-10"></div>
               <img src={settings.homeHeader || 'https://images.unsplash.com/photo-1492724441997-5dc865305da7?auto=format&fit=crop&q=80&w=2000'} className="w-full h-full object-cover" />
@@ -277,7 +355,7 @@ const Home: React.FC = () => {
         <div className="max-w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 bg-black">
            {SPECIALIZATIONS.map(spec => (
              <Link key={spec.id} to={spec.externalUrl ? '#' : `/specializace/${spec.id}`} onClick={e => spec.externalUrl && window.open(spec.externalUrl, '_blank')} className="group relative aspect-square overflow-hidden border border-white/5">
-                <img src={settings.specializationHeaders?.[spec.id] || spec.image} className="w-full h-full object-cover opacity-40 grayscale group-hover:scale-110 group-hover:opacity-60 group-hover:grayscale-0 transition-all duration-1000" />
+                <img src={settings.specializationHeaders?.[spec.id] || specCovers.get(spec.id) || spec.image} className="w-full h-full object-cover opacity-40 grayscale group-hover:scale-110 group-hover:opacity-60 group-hover:grayscale-0 transition-all duration-1000" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent z-10"></div>
                 <div className="absolute inset-0 p-8 flex flex-col justify-end z-20">
                    <h4 className="text-xl md:text-2xl font-black text-white uppercase tracking-tighter group-hover:text-[#007BFF] transition-colors leading-tight">{spec.name}</h4>
@@ -397,10 +475,10 @@ const Home: React.FC = () => {
                   <AnimatePresence mode="wait">
                     <motion.div
                       key={currentReviewIndex}
-                      initial={{ opacity: 0, y: 16 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -16 }}
-                      transition={{ duration: 0.35, ease: 'easeOut' }}
+                      initial={{ opacity: 0, x: reviewDirection * 40 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -reviewDirection * 40 }}
+                      transition={{ duration: 0.4, ease: 'easeOut' }}
                       className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
                     >
                       {shuffledReviews.slice(currentReviewIndex, currentReviewIndex + 4).map((review, idx) => (
@@ -445,14 +523,20 @@ const Home: React.FC = () => {
                   {shuffledReviews.length > 4 && (
                     <>
                       <button
-                        onClick={() => setCurrentReviewIndex((prev) => Math.max(0, prev - 1))}
+                        onClick={() => {
+                          setReviewDirection(-1);
+                          setCurrentReviewIndex((prev) => Math.max(0, prev - 1));
+                        }}
                         disabled={currentReviewIndex === 0}
                         className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-16 md:-translate-x-20 w-12 h-12 flex items-center justify-center rounded-full bg-[#007BFF] text-white hover:bg-black transition-all shadow-lg disabled:opacity-30 disabled:cursor-not-allowed"
                       >
                         <ArrowLeft size={20} />
                       </button>
                       <button
-                        onClick={() => setCurrentReviewIndex((prev) => Math.min(maxReviewIndex, prev + 1))}
+                        onClick={() => {
+                          setReviewDirection(1);
+                          setCurrentReviewIndex((prev) => Math.min(maxReviewIndex, prev + 1));
+                        }}
                         disabled={currentReviewIndex >= maxReviewIndex}
                         className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-16 md:translate-x-20 w-12 h-12 flex items-center justify-center rounded-full bg-[#007BFF] text-white hover:bg-black transition-all shadow-lg disabled:opacity-30 disabled:cursor-not-allowed"
                       >
@@ -468,7 +552,10 @@ const Home: React.FC = () => {
                     {[...Array(maxReviewIndex + 1)].map((_, idx) => (
                       <button
                         key={idx}
-                        onClick={() => setCurrentReviewIndex(idx)}
+                        onClick={() => {
+                          setReviewDirection(idx > currentReviewIndex ? 1 : -1);
+                          setCurrentReviewIndex(idx);
+                        }}
                         className={`w-3 h-3 rounded-full transition-all duration-300 ${
                           currentReviewIndex === idx
                             ? 'bg-[#007BFF] scale-125 shadow-lg'

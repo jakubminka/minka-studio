@@ -19,18 +19,42 @@ const shuffleArray = <T extends object>(array: T[]): T[] => {
   return shuffled;
 };
 
-type ProjectWithThumb = Project & { displayThumbnailUrl: string };
+type ProjectWithMedia = Project & {
+  displayMediaType: 'image' | 'video' | 'youtube';
+  displayMediaUrl: string;
+};
 
-const pickRandomImage = (project: Project): string => {
+const getYouTubeVideoId = (url: string): string | null => {
+  const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/);
+  return match ? match[1] : null;
+};
+
+const getYouTubeEmbedUrl = (url: string): string => {
+  const videoId = getYouTubeVideoId(url);
+  return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
+};
+
+const pickProjectMedia = (project: Project): { type: 'image' | 'video' | 'youtube'; url: string } => {
+  const galleryVideo = (project.gallery || []).find(item => item.type === 'video');
+  if (galleryVideo) {
+    if (galleryVideo.source === 'youtube') {
+      if (project.youtubeCoverUrl) {
+        return { type: 'image', url: project.youtubeCoverUrl };
+      }
+      return { type: 'youtube', url: galleryVideo.url };
+    }
+    return { type: 'video', url: galleryVideo.url };
+  }
+
   const galleryImages = (project.gallery || []).filter(item => item.type === 'image');
   if (galleryImages.length > 0) {
     const randomImage = galleryImages[Math.floor(Math.random() * galleryImages.length)];
-    return randomImage.url;
+    return { type: 'image', url: randomImage.url };
   }
-  return project.thumbnailUrl;
+  return { type: 'image', url: project.thumbnailUrl };
 };
 
-const ProjectItem: React.FC<{ project: ProjectWithThumb, weight: number, showSpecialization: boolean }> = ({ project, weight, showSpecialization }) => {
+const ProjectItem: React.FC<{ project: ProjectWithMedia, weight: number, showSpecialization: boolean }> = ({ project, weight, showSpecialization }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const navigate = useNavigate();
 
@@ -58,15 +82,47 @@ const ProjectItem: React.FC<{ project: ProjectWithThumb, weight: number, showSpe
     >
       <Link to={`/projekt/${project.id}`} className="block w-full h-full relative">
         <div className="absolute inset-0 w-full h-full overflow-hidden">
-          <motion.img 
-            src={project.displayThumbnailUrl} 
-            alt={project.title}
-            loading="lazy"
-            onLoad={() => setIsLoaded(true)}
-            animate={{ opacity: isLoaded ? 1 : 0 }}
-            transition={{ duration: 1 }}
-            className="w-full h-full object-cover grayscale-[0.3] group-hover:grayscale-0 group-hover:scale-110 transition-transform duration-[3s] ease-out"
-          />
+          {project.displayMediaType === 'video' ? (
+            <video
+              src={project.displayMediaUrl}
+              autoPlay
+              muted
+              loop
+              playsInline
+              onLoadedData={() => setIsLoaded(true)}
+              className="w-full h-full object-cover grayscale-[0.3] group-hover:grayscale-0 group-hover:scale-110 transition-transform duration-[3s] ease-out"
+            />
+          ) : project.displayMediaType === 'youtube' ? (
+            <div className="absolute inset-0 w-full h-full">
+              <iframe
+                src={`${getYouTubeEmbedUrl(project.displayMediaUrl)}?autoplay=1&mute=1&loop=1&playlist=${getYouTubeVideoId(project.displayMediaUrl)}&controls=0&showinfo=0&modestbranding=1&playsinline=1&fs=0&rel=0&iv_load_policy=3&disablekb=1`}
+                className="absolute"
+                style={{
+                  top: '50%',
+                  left: '50%',
+                  width: '177.77777778vh',
+                  height: '56.25vw',
+                  minHeight: '100%',
+                  minWidth: '100%',
+                  transform: 'translate(-50%, -50%)',
+                  pointerEvents: 'none'
+                }}
+                allow="autoplay; encrypted-media"
+                onLoad={() => setIsLoaded(true)}
+              />
+              <div className="absolute inset-0" style={{ pointerEvents: 'auto' }}></div>
+            </div>
+          ) : (
+            <motion.img 
+              src={project.displayMediaUrl} 
+              alt={project.title}
+              loading="lazy"
+              onLoad={() => setIsLoaded(true)}
+              animate={{ opacity: isLoaded ? 1 : 0 }}
+              transition={{ duration: 1 }}
+              className="w-full h-full object-cover grayscale-[0.3] group-hover:grayscale-0 group-hover:scale-110 transition-transform duration-[3s] ease-out"
+            />
+          )}
           {/* Dark Cinematic Gradient Overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent z-10 opacity-90 group-hover:opacity-60 transition-opacity duration-700"></div>
           {/* Blue tint on hover */}
@@ -107,7 +163,8 @@ const MasonryGrid: React.FC<MasonryGridProps> = ({ projects, showSpecialization 
     const shuffled = shuffleArray(projects);
     return shuffled.map((project) => ({
       ...project,
-      displayThumbnailUrl: pickRandomImage(project),
+      displayMediaType: pickProjectMedia(project).type,
+      displayMediaUrl: pickProjectMedia(project).url,
       weight: Math.random() > 0.5 ? 2.0 : 1.2
     }));
   }, [projects]); 

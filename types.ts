@@ -47,6 +47,7 @@ export interface Project {
   youtubeUrl?: string;
   websiteUrl?: string;
   websiteLabel?: string;
+  youtubeCoverUrl?: string;
 }
 
 export interface BlogPost {

@@ -23,7 +23,7 @@ const ProjectManagerV2: React.FC = () => {
   
   const [allMediaItems, setAllMediaItems] = useState<FileItem[]>([]);
   const [showMediaPicker, setShowMediaPicker] = useState(false);
-  const [pickerMode, setPickerMode] = useState<'gallery'>('gallery');
+  const [pickerMode, setPickerMode] = useState<'gallery' | 'youtubeCover'>('gallery');
   const [selectedMedia, setSelectedMedia] = useState<Set<string>>(new Set());
   
   const draggedGalleryItem = useRef<number | null>(null);
@@ -42,7 +42,8 @@ const ProjectManagerV2: React.FC = () => {
     servicesDelivered: '',
     youtubeUrl: '',
     websiteUrl: '',
-    websiteLabel: ''
+    websiteLabel: '',
+    youtubeCoverUrl: ''
   });
   
   const [youtubeUrls, setYoutubeUrls] = useState<string[]>([]);
@@ -195,7 +196,9 @@ const ProjectManagerV2: React.FC = () => {
 
   // Callback for media picker - single selection (thumbnail)
   const handleMediaPickerSelect = (item: FileItem) => {
-    // Only for gallery mode now (thumbnail removed)
+    if (pickerMode === 'youtubeCover') {
+      setFormData(p => ({ ...p, youtubeCoverUrl: item.url }));
+    }
     setShowMediaPicker(false);
   };
 
@@ -355,6 +358,7 @@ const ProjectManagerV2: React.FC = () => {
         servicesDelivered: formData.servicesDelivered || '',
         websiteUrl: formData.websiteUrl || '',
         websiteLabel: formData.websiteLabel || '',
+          youtubeCoverUrl: formData.youtubeCoverUrl || '',
         youtubeUrl: '' // Keep for backward compatibility but not used
       };
 
@@ -395,7 +399,8 @@ const ProjectManagerV2: React.FC = () => {
       gallery: [],
       servicesDelivered: '',
       websiteUrl: '',
-      websiteLabel: ''
+      websiteLabel: '',
+      youtubeCoverUrl: ''
     });
     setYoutubeUrls([]);
   };
@@ -722,6 +727,29 @@ const ProjectManagerV2: React.FC = () => {
                         </button>
                       </div>
                     ))}
+                  </div>
+                </div>
+
+                {/* YouTube Cover */}
+                <div>
+                  <label className="text-[10px] font-black uppercase text-gray-400 block mb-2">
+                    Vlastni cover pro YouTube (volitelne)
+                  </label>
+                  <div className="flex gap-3">
+                    <input
+                      type="url"
+                      value={formData.youtubeCoverUrl || ''}
+                      onChange={e => setFormData(p => ({ ...p, youtubeCoverUrl: e.target.value }))}
+                      placeholder="https://..."
+                      className="flex-1 border-2 border-gray-200 p-3 font-bold text-sm text-black outline-none focus:border-[#007BFF]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => { setPickerMode('youtubeCover'); setShowMediaPicker(true); }}
+                      className="border-2 border-[#007BFF] text-[#007BFF] px-4 py-2 text-[10px] font-black uppercase hover:bg-blue-50"
+                    >
+                      Vybrat
+                    </button>
                   </div>
                 </div>
 
