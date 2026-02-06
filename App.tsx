@@ -1,22 +1,24 @@
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, lazy, Suspense } from 'react';
 import { HashRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
-import Home from './pages/Home';
-import Portfolio from './pages/Portfolio';
-import Blog from './pages/Blog';
-import BlogPostDetail from './pages/BlogPostDetail';
-import SpecializationDetail from './pages/SpecializationDetail';
-import ProjectDetail from './pages/ProjectDetail';
-import Contact from './pages/Contact';
-import Backstage from './pages/Backstage';
-import AdminDashboard from './pages/AdminDashboard';
-import NotFound from './pages/NotFound';
-import PrivacyPolicy from './pages/PrivacyPolicy';
-import TermsOfService from './pages/TermsOfService';
 import CookieBar from './components/CookieBar';
 import { supabase } from './src/supabaseClient';
+
+// Lazy load pages for better code splitting
+const Home = lazy(() => import('./pages/Home'));
+const Portfolio = lazy(() => import('./pages/Portfolio'));
+const Blog = lazy(() => import('./pages/Blog'));
+const BlogPostDetail = lazy(() => import('./pages/BlogPostDetail'));
+const SpecializationDetail = lazy(() => import('./pages/SpecializationDetail'));
+const ProjectDetail = lazy(() => import('./pages/ProjectDetail'));
+const Contact = lazy(() => import('./pages/Contact'));
+const Backstage = lazy(() => import('./pages/Backstage'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const NotFound = lazy(() => import('./pages/NotFound'));
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
+const TermsOfService = lazy(() => import('./pages/TermsOfService'));
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
@@ -67,20 +69,26 @@ const AppContent = () => {
       <AnalyticsTracker />
       {!isAdminPage && <Navbar />}
       <main className="flex-grow">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/portfolio" element={<Portfolio />} />
-          <Route path="/blog" element={<Blog />} />
-          <Route path="/blog/:id" element={<BlogPostDetail />} />
-          <Route path="/specializace/:id" element={<SpecializationDetail />} />
-          <Route path="/projekt/:id" element={<ProjectDetail />} />
-          <Route path="/jak-pracuji" element={<Backstage />} />
-          <Route path="/kontakt" element={<Contact />} />
-          <Route path="/ochrana-soukromi" element={<PrivacyPolicy />} />
-          <Route path="/podminky-spoluprace" element={<TermsOfService />} />
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <Suspense fallback={
+          <div className="flex items-center justify-center min-h-screen">
+            <div className="w-12 h-12 border-4 border-[#007BFF] border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        }>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/portfolio" element={<Portfolio />} />
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/blog/:id" element={<BlogPostDetail />} />
+            <Route path="/specializace/:id" element={<SpecializationDetail />} />
+            <Route path="/projekt/:id" element={<ProjectDetail />} />
+            <Route path="/jak-pracuji" element={<Backstage />} />
+            <Route path="/kontakt" element={<Contact />} />
+            <Route path="/ochrana-soukromi" element={<PrivacyPolicy />} />
+            <Route path="/podminky-spoluprace" element={<TermsOfService />} />
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
       </main>
       {!isAdminPage && !isContactPage && <Footer />}
       {!isAdminPage && <CookieBar />}
