@@ -14,13 +14,11 @@ const Home: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [partners, setPartners] = useState<{id: string, name: string}[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [shuffledReviews, setShuffledReviews] = useState<Review[]>([]);
   const [currentReviewIndex, setCurrentReviewIndex] = useState(0);
   const [reviewDirection, setReviewDirection] = useState<1 | -1>(1);
-  
-  // Shuffle reviews randomly on load
-  const shuffledReviews = useMemo(() => {
-    return [...reviews].sort(() => Math.random() - 0.5);
-  }, [reviews]);
+  const [specCovers, setSpecCovers] = useState<Map<string, string>>(new Map());
+  const [homePortfolioProjects, setHomePortfolioProjects] = useState<Project[]>([]);
   
   const [hoverSide, setHoverSide] = useState<'left' | 'right' | null>(null);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
@@ -64,8 +62,38 @@ const Home: React.FC = () => {
   useEffect(() => {
     const load = async () => {
       const savedProjects = await projectDB.getAll();
-      if (savedProjects.length > 0) setProjects(savedProjects);
-      else setProjects(DEFAULT_PROJECTS);
+      if (savedProjects.length > 0) {
+        setProjects(savedProjects);
+        
+        // Generate random portfolio selection (once on load)
+        setHomePortfolioProjects([...savedProjects].sort(() => Math.random() - 0.5).slice(0, 12));
+        
+        // Generate random covers for specializations (once on load)
+        const coversMap = new Map<string, string>();
+        SPECIALIZATIONS.forEach(spec => {
+          const specProjects = savedProjects.filter(p => p.categoryId === spec.id);
+          if (specProjects.length === 0) return;
+          
+          const project = specProjects[Math.floor(Math.random() * specProjects.length)];
+          const galleryImages = (project.gallery || []).filter(item => item.type === 'image');
+          if (galleryImages.length > 0) {
+            const randomImage = galleryImages[Math.floor(Math.random() * galleryImages.length)];
+            coversMap.set(spec.id, randomImage.url);
+            return;
+          }
+          if (project.youtubeCoverUrl) {
+            coversMap.set(spec.id, project.youtubeCoverUrl);
+            return;
+          }
+          if (project.thumbnailUrl) {
+            coversMap.set(spec.id, project.thumbnailUrl);
+          }
+        });
+        setSpecCovers(coversMap);
+      } else {
+        setProjects(DEFAULT_PROJECTS);
+        setHomePortfolioProjects([...DEFAULT_PROJECTS].sort(() => Math.random() - 0.5).slice(0, 12));
+      }
       
       const savedSettings = await dataStore.doc('web_settings').get();
       if (savedSettings) setSettings(prev => ({ ...prev, ...savedSettings }));
@@ -78,11 +106,15 @@ const Home: React.FC = () => {
       if (savedReviews && savedReviews.length > 0) {
         // Map from DB format (content/company) to UI format (text/platform)
         console.log('📖 Loaded reviews:', savedReviews.length);
-        setReviews(savedReviews.map(mapReviewFromDb));
+        const mappedReviews = savedReviews.map(mapReviewFromDb);
+        setReviews(mappedReviews);
+        // Shuffle reviews once on load
+        setShuffledReviews([...mappedReviews].sort(() => Math.random() - 0.5));
       } else {
         // Žádné recenze
         console.log('⚠️ No reviews found');
         setReviews([]);
+        setShuffledReviews([]);
       }
       
       setIsDataLoaded(true);
@@ -97,11 +129,7 @@ const Home: React.FC = () => {
     if (currentReviewIndex >= shuffledReviews.length && shuffledReviews.length > 0) {
       setCurrentReviewIndex(0);
     }
-  }, [shuffledReviews.length, currentReviewIndex]);
-
-  const homePortfolioProjects = useMemo(() => {
-    return [...projects].sort(() => Math.random() - 0.5).slice(0, 12);
-  }, [projects]);
+  }, [shuffledReviews.length]);
 
   const heroProjects = useMemo(() => projects.slice(0, 5), [projects]);
 
@@ -142,29 +170,6 @@ const Home: React.FC = () => {
     });
     return map;
   }, [heroProjects]);
-
-  const specCovers = useMemo(() => {
-    const map = new Map<string, string>();
-    SPECIALIZATIONS.forEach(spec => {
-      const specProjects = projects.filter(p => p.categoryId === spec.id);
-      if (specProjects.length === 0) return;
-      const project = specProjects[Math.floor(Math.random() * specProjects.length)];
-      const galleryImages = (project.gallery || []).filter(item => item.type === 'image');
-      if (galleryImages.length > 0) {
-        const randomImage = galleryImages[Math.floor(Math.random() * galleryImages.length)];
-        map.set(spec.id, randomImage.url);
-        return;
-      }
-      if (project.youtubeCoverUrl) {
-        map.set(spec.id, project.youtubeCoverUrl);
-        return;
-      }
-      if (project.thumbnailUrl) {
-        map.set(spec.id, project.thumbnailUrl);
-      }
-    });
-    return map;
-  }, [projects]);
 
   const maxReviewIndex = Math.max(shuffledReviews.length - 4, 0);
 
